@@ -141,6 +141,25 @@ static int setTimeServicesTime(time_bases_type base, long int secs)
 }
 #endif
 
+#if HAVE_QC_TIME_SERVICES
+static int setTimeServicesTime(time_bases_type base, long int secs)
+{
+    int rc = 0;
+    time_genoff_info_type time_set;
+    uint64_t value = secs;
+    time_set.base = base;
+    time_set.unit = TIME_SECS;
+    time_set.operation = T_SET;
+    time_set.ts_val = &value;
+    rc = time_genoff_operation(&time_set);
+    if (rc) {
+        ALOGE("Error setting generic offset: %d. Still setting system time\n", rc);
+        rc = -1;
+    }
+    return rc;
+}
+#endif
+
 int AlarmImplAlarmDriver::setTime(struct timeval *tv)
 {
     struct timespec ts;
