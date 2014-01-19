@@ -184,7 +184,6 @@ public class Clock extends TextView implements DemoMode, Tunable, CommandQueue.C
                     }
                 });
             }
-
             if (action.equals(Intent.ACTION_SCREEN_ON)) {
                 mScreenOn = true;
             } else if (action.equals(Intent.ACTION_SCREEN_OFF)) {
