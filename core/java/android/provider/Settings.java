@@ -6684,13 +6684,13 @@ public final class Settings {
                 "managed_profile_contact_remote_search";
 
 	/**
-         * Setting to record whether to allow quickly expanding the Quick Settings screen
-         * with simplified gestures. To be used with the OTS framework.
+         * Settings to reset on user request. They will fall back to their default value (0).
          *
          * @hide
          */
-        public static final String QUICK_SETTINGS_QUICK_PULL_DOWN =
+        public static final String[] SETTINGS_TO_RESET = {
                 "quick_settings_quick_pull_down";
+        };
         /**
          * Whether to include options in power menu for rebooting into recovery and bootloader
          * @hide
