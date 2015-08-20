@@ -695,7 +695,6 @@ public final class SystemServer {
         ILockSettings lockSettings = null;
         AssetAtlasService atlas = null;
         MediaRouterService mediaRouter = null;
-        GestureService gestureService = null;
         EdgeGestureService edgeGestureService = null;
 
         // Bring up services needed for UI.
@@ -1374,14 +1373,6 @@ public final class SystemServer {
             reportWtf("making Display Manager Service ready", e);
         }
         Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
-
-        if (gestureService != null) {
-            try {
-                gestureService.systemReady();
-            } catch (Throwable e) {
-                reportWtf("making Gesture Sensor Service ready", e);
-            }
-        }
 
         if (edgeGestureService != null) {
             try {

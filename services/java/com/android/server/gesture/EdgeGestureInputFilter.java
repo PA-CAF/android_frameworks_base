@@ -494,9 +494,7 @@ public class EdgeGestureInputFilter implements IInputFilter {
                     event.getMetaState(), event.getButtonState(),
                     1.0f, 1.0f, event.getDeviceId(), event.getEdgeFlags(),
                     event.getSource(), event.getFlags());
-            if (DEBUG) {
-                Slog.d(TAG, "Synthesized event:" + down);
-            }
+            Slog.d(TAG, "Synthesized event:" + down);
             sendInputEvent(down, policyFlags);
             mSyntheticDownTime = event.getEventTime();
         } else {
