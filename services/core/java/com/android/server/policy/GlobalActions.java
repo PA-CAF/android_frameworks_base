@@ -103,6 +103,7 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
     /* Valid settings for global actions keys.
      * see config.xml config_globalActionList */
     private static final String GLOBAL_ACTION_KEY_POWER = "power";
+    private static final String GLOBAL_ACTION_KEY_REBOOT = "reboot";
     private static final String GLOBAL_ACTION_KEY_AIRPLANE = "airplane";
     private static final String GLOBAL_ACTION_KEY_BUGREPORT = "bugreport";
     private static final String GLOBAL_ACTION_KEY_SILENT = "silent";
@@ -223,6 +224,9 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
             attrs.setTitle("GlobalActions");
             mDialog.getWindow().setAttributes(attrs);
             mDialog.show();
+            // int dialogWidth = mContext.getResources().getDimensionPixelSize(R.dimen.global_actions_dialog_width);
+            // int dialogHeight = mContext.getResources().getDimensionPixelSize(R.dimen.global_actions_dialog_height);
+            // mDialog.getWindow().setLayout(dialogWidth /*width*/, dialogHeight /*height*/);
             mDialog.getWindow().getDecorView().setSystemUiVisibility(View.STATUS_BAR_DISABLE_EXPAND);
         }
     }
@@ -303,6 +307,10 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
         params.mAdapter = mAdapter;
         params.mOnClickListener = this;
         params.mForceInverseBackground = true;
+        // params.mViewSpacingLeft = 0;
+        // params.mViewSpacingTop = 0;
+        // params.mViewSpacingRight = 0;
+        // params.mViewSpacingBottom = 0;
 
         GlobalActionsDialog dialog = new GlobalActionsDialog(mContext, params);
         dialog.setCanceledOnTouchOutside(false); // Handled by the custom class.
@@ -357,7 +365,7 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
         @Override
         public void onPress() {
             // shutdown by making sure radio and power are handled accordingly.
-            mWindowManagerFuncs.shutdown(false /* confirm */);
+            mWindowManagerFuncs.shutdown(true /* confirm */);
         }
     }
 
