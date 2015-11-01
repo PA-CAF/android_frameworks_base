@@ -499,32 +499,14 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         @Override
         public void onChange(boolean selfChange) {
             boolean wasUsing = mUseNavBar;
-            boolean defaultToNavigationBar = mContext.getResources()
-                    .getBoolean(com.android.internal.R.bool.config_defaultToNavigationBar);
             mUseNavBar = Settings.System.getIntForUser(
-                    mContext.getContentResolver(), Settings.System.NAVIGATION_BAR_ENABLED,
-                    defaultToNavigationBar ? 1 : 0, UserHandle.USER_CURRENT) != 0;
+                    mContext.getContentResolver(), Settings.System.NAVIGATION_BAR_ENABLED, 0,
+                    UserHandle.USER_CURRENT) != 0;
             Log.d(TAG, "navbar is " + (mUseNavBar ? "enabled" : "disabled"));
             if (wasUsing != mUseNavBar) {
                 setNavBarEnabled(mUseNavBar);
                 if (mAssistManager != null) {
                     mAssistManager.onConfigurationChanged();
-                }
-            }
-        }
-    };
-
-    final private ContentObserver mSwapNavKeyObserver = new ContentObserver(mHandler) {
-        @Override
-        public void onChange(boolean selfChange) {
-            boolean wasUsing = mUseSwapKey;
-            mUseSwapKey = Settings.System.getIntForUser(
-                    mContext.getContentResolver(), Settings.System.SWAP_NAVIGATION_KEYS, 0,
-                    UserHandle.USER_CURRENT) != 0;
-            Log.d(TAG, "navbar is " + (mUseSwapKey ? "swapped" : "regular"));
-            if (wasUsing != mUseSwapKey) {
-                if (mNavigationBarView != null) {
-                    prepareNavigationBarView();
                 }
             }
         }
@@ -1119,9 +1101,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
 
         // listen for NAVIGATION_BAR_ENABLED setting (per-user)
         resetNavBarObserver();
-
-        // listen for SWAP_NAVIGATION_KEYS setting (per-user)
-        resetSwapNavKeyObserver();
 
         return mStatusBarView;
     }
@@ -3814,7 +3793,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         super.userSwitched(newUserId);
         if (MULTIUSER_DEBUG) mNotificationPanelDebugText.setText("USER " + newUserId);
         resetNavBarObserver();
-        resetSwapNavKeyObserver();
         animateCollapsePanels();
         updatePublicMode();
         updateNotifications();
@@ -3849,14 +3827,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         mContext.getContentResolver().registerContentObserver(
                 Settings.System.getUriFor(Settings.System.NAVIGATION_BAR_ENABLED), true,
                 mNavBarObserver, mCurrentUserId);
-    }
-
-    private void resetSwapNavKeyObserver() {
-        mContext.getContentResolver().unregisterContentObserver(mSwapNavKeyObserver);
-        mSwapNavKeyObserver.onChange(false);
-        mContext.getContentResolver().registerContentObserver(
-                Settings.System.getUriFor(Settings.System.SWAP_NAVIGATION_KEYS), true,
-                mSwapNavKeyObserver, mCurrentUserId);
     }
 
     /**
