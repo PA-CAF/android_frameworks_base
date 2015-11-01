@@ -993,6 +993,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             resolver.registerContentObserver(Settings.Secure.getUriFor(
                     Settings.Secure.SYSTEM_DESIGN_FLAGS), false, this,
                     UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.NAVIGATION_BAR_ENABLED), false, this,
+                    UserHandle.USER_ALL);
             updateSettings();
         }
 
@@ -2445,6 +2448,12 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 updateEdgeGestureListenerState();
             }
 
+            final boolean navBarEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.NAVIGATION_BAR_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
+            if (navBarEnabled != mNavBarEnabled) {
+                mNavBarEnabled = navBarEnabled;
+            }
+
             // Configure rotation lock.
             int userRotation = Settings.System.getIntForUser(resolver,
                     Settings.System.USER_ROTATION, Surface.ROTATION_0,
@@ -3005,7 +3014,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     @Override
     public int getNonDecorDisplayWidth(int fullWidth, int fullHeight, int rotation,
             int uiMode) {
-        if (mHasNavigationBar && shouldNavigationBarOccupySpace()) {
+        if (hasNavigationBar() && shouldNavigationBarOccupySpace()) {
             // For a basic navigation bar, when we are in landscape mode we place
             // the navigation bar to the side.
             if (mNavigationBarCanMove && fullWidth > fullHeight) {
@@ -3026,7 +3035,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     @Override
     public int getNonDecorDisplayHeight(int fullWidth, int fullHeight, int rotation,
             int uiMode) {
-        if (mHasNavigationBar && shouldNavigationBarOccupySpace()) {
+        if (hasNavigationBar() && shouldNavigationBarOccupySpace()) {
             // For a basic navigation bar, when we are in portrait mode we place
             // the navigation bar to the bottom.
             if (!mNavigationBarCanMove || fullWidth < fullHeight) {
@@ -5428,13 +5437,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         Rect osf = null;
         dcf.setEmpty();
 
-        // IMPORTANT: I have modified this, because it does not make sense checking
-        // for navigation bar availability within checking Lw visibility, we have forced
-        // immersive mode and other cases that are kinda penalized by this. Don't chain
-        // mNavigationBar.isVisibleLw() tothe boolean value. carlosavignano@aospa.co
         final boolean hasNavBar = (isDefaultDisplay && hasNavigationBar()
-                && mNavigationBar != null); // && mNavigationBar.isVisibleLw());
-        final boolean forceNavBarImmersive =  shouldForceNavigationBarImmersive();
+                && mNavigationBar != null && mNavigationBar.isVisibleLw());
 
         final int adjust = sim & SOFT_INPUT_MASK_ADJUST;
 
