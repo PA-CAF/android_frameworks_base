@@ -219,6 +219,12 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     // screen pinning unlock within long pressing back button.
     static final boolean ENABLE_CUSTOM_INPUT_POLICY = true;
 
+    // This controls whether we will intercept key events and
+    // handle them with our customized input policy. Enable
+    // when navigation bar is fully supporting this and we have
+    // screen pinning unlock within long pressing back button.
+    static final boolean ENABLE_CUSTOM_INPUT_POLICY = false;
+
     // These need to match the documentation/constant in
     // core/res/res/values/config.xml
     static final int LONG_PRESS_HOME_NOTHING = 0;
@@ -233,7 +239,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     static final int SHORT_PRESS_WINDOW_PICTURE_IN_PICTURE = 1;
 
     // These need to match the documentation/constant in
-    // core/res/res/values/custom_config.xml
+    // core/res/res/values/pa_config.xml
     private static final int KEY_ACTION_NOTHING = 0;
     private static final int KEY_ACTION_MENU = 1;
     private static final int KEY_ACTION_APP_SWITCH = 2;
@@ -242,10 +248,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private static final int KEY_ACTION_IN_APP_SEARCH = 5;
     private static final int KEY_ACTION_CAMERA = 6;
     private static final int KEY_ACTION_LAST_APP = 7;
+    private static final int KEY_ACTION_SPLIT_SCREEN = 8;
 
     // Special values, used internal only.
-    private static final int KEY_ACTION_HOME = KEY_ACTION_LAST_APP + 1;
-    private static final int KEY_ACTION_BACK = KEY_ACTION_LAST_APP + 2;
+    private static final int KEY_ACTION_HOME = 100;
+    private static final int KEY_ACTION_BACK = 101;
 
     // Masks for checking presence of hardware keys.
     // Must match values in core/res/res/values/config.xml
@@ -1721,7 +1728,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mHandler.post(r);
 
         if (repeat) {
-            mHandler.postDelayed(r, 100);
+            mHandler.postDelayed(r, 125);
         }
     }
 
@@ -1737,7 +1744,17 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         if (statusbar != null) {
             statusbar.onCameraLaunchGestureDetected(-1);
         }
-     }
+    }
+
+    /**
+     * Request current window to enter multiwindow mode.
+     */
+    private void toggleSplitScreen() {
+        StatusBarManagerInternal statusbar = getStatusBarManagerInternal();
+        if (statusbar != null) {
+            statusbar.toggleSplitScreen();
+        }
+    }
 
     private boolean isRoundWindow() {
         return mContext.getResources().getConfiguration().isScreenRound();
@@ -2030,45 +2047,15 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mWindowManagerInternal.registerAppTransitionListener(
                 mStatusBarController.getAppTransitionListener());
 
-        if (ENABLE_CUSTOM_INPUT_POLICY) {
-            // Custom input policy settings.
-            for (int i = 0; i < SUPPORTED_KEYCODE_LIST.length; i++) {
-                final int keyCode = SUPPORTED_KEYCODE_LIST[i];
-                mKeyPressed.put(keyCode, false);
-                mKeyConsumed.put(keyCode, false);
-                mKeyDoubleTapPending.put(keyCode, false);
-                mKeyDoubleTapRunnable.put(keyCode, createDoubleTapTimeoutRunnable(keyCode));
-                mKeyDoubleTapBehaviorDefaultResId.put(keyCode, getKeyDoubleTapBehaviorResId(keyCode));
-                mKeyLongPressBehaviorDefaultResId.put(keyCode, getKeyLongPressBehaviorResId(keyCode));
-            }
-        }
-
-        String deviceKeyHandlerLib = mContext.getResources().getString(
-                com.android.internal.R.string.config_deviceKeyHandlerLib);
-
-        String deviceKeyHandlerClass = mContext.getResources().getString(
-                com.android.internal.R.string.config_deviceKeyHandlerClass);
-
-        if (!deviceKeyHandlerLib.isEmpty() && !deviceKeyHandlerClass.isEmpty()) {
-            PathClassLoader loader =  new PathClassLoader(deviceKeyHandlerLib,
-                    getClass().getClassLoader());
-            try {
-                Class<?> klass = loader.loadClass(deviceKeyHandlerClass);
-                Constructor<?> constructor = klass.getConstructor(Context.class);
-                mDeviceKeyHandler = (DeviceKeyHandler) constructor.newInstance(
-                        mContext);
-                if(DEBUG) Slog.d(TAG, "Device key handler loaded");
-            } catch (Exception e) {
-                Slog.w(TAG, "Could not instantiate device key handler "
-                        + deviceKeyHandlerClass + " from class "
-                        + deviceKeyHandlerLib, e);
-            }
-        }
-
-        boolean enableKeyHandler = context.getResources().
-                getBoolean(com.android.internal.R.bool.config_enableKeyHandler);
-        if (enableKeyHandler) {
-            mKeyHandler = new KeyHandler(mContext);
+        // Custom input policy settings.
+        for (int i = 0; i < SUPPORTED_KEYCODE_LIST.length; i++) {
+            final int keyCode = SUPPORTED_KEYCODE_LIST[i];
+            mKeyPressed.put(keyCode, false);
+            mKeyConsumed.put(keyCode, false);
+            mKeyDoubleTapPending.put(keyCode, false);
+            mKeyDoubleTapRunnable.put(keyCode, createDoubleTapTimeoutRunnable(keyCode));
+            mKeyDoubleTapBehaviorDefaultResId.put(keyCode, getKeyDoubleTapBehaviorResId(keyCode));
+            mKeyLongPressBehaviorDefaultResId.put(keyCode, getKeyLongPressBehaviorResId(keyCode));
         }
     }
 
@@ -2103,10 +2090,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mNavBarOpacityMode = res.getInteger(
                 com.android.internal.R.integer.config_navBarOpacityMode);
 
-        if (!ENABLE_CUSTOM_INPUT_POLICY) {
-            return;
-        }
-
         // Read custom policy settings.
         final boolean hasHome = mNavBarEnabled || (mDeviceHardwareKeys & KEY_MASK_HOME) != 0;
         final boolean hasAppSwitch = mNavBarEnabled || (mDeviceHardwareKeys & KEY_MASK_APP_SWITCH) != 0;
@@ -2120,13 +2103,13 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             int behavior;
             // long press
             behavior = res.getInteger(getKeyLongPressBehaviorResId(keyCode));
-            if (behavior < KEY_ACTION_NOTHING || behavior > KEY_ACTION_LAST_APP) {
+            if (behavior < KEY_ACTION_NOTHING || behavior > SUPPORTED_KEY_ACTIONS.length) {
                 behavior = KEY_ACTION_NOTHING;
             }
             mKeyLongPressBehavior.put(keyCode, behavior);
             // double tap
             behavior = res.getInteger(getKeyDoubleTapBehaviorResId(keyCode));
-            if (behavior < KEY_ACTION_NOTHING || behavior > KEY_ACTION_LAST_APP) {
+            if (behavior < KEY_ACTION_NOTHING || behavior > SUPPORTED_KEY_ACTIONS.length) {
                 behavior = KEY_ACTION_NOTHING;
             }
             mKeyDoubleTapBehavior.put(keyCode, behavior);
@@ -3420,6 +3403,21 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         };
 
     /**
+     * List of key actions available for key code behaviors.
+     */
+    static final int[] SUPPORTED_KEY_ACTIONS = {
+            KEY_ACTION_NOTHING,
+            KEY_ACTION_MENU,
+            KEY_ACTION_APP_SWITCH,
+            KEY_ACTION_SEARCH,
+            KEY_ACTION_VOICE_SEARCH,
+            KEY_ACTION_IN_APP_SEARCH,
+            KEY_ACTION_CAMERA,
+            KEY_ACTION_LAST_APP,
+            KEY_ACTION_SPLIT_SCREEN
+        };
+
+    /**
      * @return if key code's last event has been consumed.
      * @param keyCode the KeyEvent key code.
      */
@@ -3624,7 +3622,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 break;
             case KEY_ACTION_LAST_APP:
                 awakenDreams();
+                // TODO> handle no recent apps
                 triggerVirtualKeypress(KeyEvent.KEYCODE_APP_SWITCH, !mRecentsVisible);
+                break;
+            case KEY_ACTION_SPLIT_SCREEN:
+                toggleSplitScreen();
                 break;
         }
     }
@@ -3818,7 +3820,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 } else {
                     if (keyCode == KeyEvent.KEYCODE_APP_SWITCH
                             || longPressBehavior == KEY_ACTION_APP_SWITCH
-                            || doubleTapBehavior == KEY_ACTION_APP_SWITCH) {
+                            || doubleTapBehavior == KEY_ACTION_APP_SWITCH
+                            || longPressBehavior == KEY_ACTION_SPLIT_SCREEN
+                            || doubleTapBehavior == KEY_ACTION_SPLIT_SCREEN
+                            || longPressBehavior == KEY_ACTION_LAST_APP
+                            || doubleTapBehavior == KEY_ACTION_LAST_APP) {
                         preloadRecentApps();
                     }
                 }
@@ -6415,13 +6421,38 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     + ", canApplyCustomPolicy = " + canApplyCustomPolicy(keyCode));
         }
 
-        /**
-         * Handle gestures input earlier then anything when screen is off.
-         * @author Carlo Savignano
-         */
-        if (!interactive) {
-            if (mKeyHandler != null && mKeyHandler.handleKeyEvent(event)) {
+        // Apply custom policy for supported key codes.
+        if (canApplyCustomPolicy(keyCode) && !isCustomSource) {
+            if (mNavBarEnabled && !navBarKey /* TODO> && !isADBVirtualKeyOrAnyOtherKeyThatWeNeedToHandleAKAWhenMonkeyTestOrWHATEVER! */) {
+                if (DEBUG_INPUT) {
+                    Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: mNavBarEnabled, discard hw event.");
+                }
+                // Don't allow key events from hw keys when navbar is enabled.
                 return 0;
+            } else if (!interactive) {
+                if (DEBUG_INPUT) {
+                    Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: screen not interactive, discard hw event.");
+                }
+                // Ensure nav keys are handled on full interactive screen only.
+                return 0;
+            } else if (interactive) {
+                if (!down) {
+                    // Make sure we consume hw key events properly. Discard them
+                    // here if the event is already been consumed. This case can
+                    // happen when we send virtual key events and the virtual
+                    // ACTION_UP is sent before the hw ACTION_UP resulting in
+                    // handling twice an action up event.
+                    final boolean consumed = isKeyConsumed(keyCode);
+                    if (consumed) {
+                        if (DEBUG_INPUT) {
+                            Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: event already consumed, discard hw event.");
+                        }
+                        setKeyConsumed(keyCode, !consumed);
+                        return 0;
+                    }
+                } else {
+                    hapticFeedbackRequested = true;
+                }
             }
         }
 
