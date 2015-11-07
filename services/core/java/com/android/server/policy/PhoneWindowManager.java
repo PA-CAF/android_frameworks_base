@@ -153,6 +153,7 @@ import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.hardware.display.DisplayManager;
+import android.hardware.input.InputManager;
 import android.hardware.hdmi.HdmiControlManager;
 import android.hardware.hdmi.HdmiPlaybackClient;
 import android.hardware.hdmi.HdmiPlaybackClient.OneTouchPlayCallback;
@@ -327,7 +328,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     // handle them with our customized input policy. Enable
     // when navigation bar is fully supporting this and we have
     // screen pinning unlock within long pressing back button.
-    static final boolean ENABLE_CUSTOM_INPUT_POLICY = true;
+    static final boolean ENABLE_CUSTOM_INPUT_POLICY = false;
 
     // These need to match the documentation/constant in
     // core/res/res/values/config.xml
@@ -646,6 +647,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     boolean mUseTvRouting;
 
     private boolean mHandleVolumeKeysInWM;
+    int mDeviceHardwareKeys;
 
     int mDeviceHardwareKeys;
 
@@ -6868,6 +6870,41 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     + ", virtualKey = " + virtualKey + ", virtualHardKey = " + virtualHardKey
                     + ", navBarKey = " + navBarKey + ", fromSystem = " + fromSystem
                     + ", canApplyCustomPolicy = " + canApplyCustomPolicy(keyCode));
+        }
+
+        // Apply custom policy for supported key codes.
+        if (canApplyCustomPolicy(keyCode) && !isCustomSource) {
+            if (mNavBarEnabled && !navBarKey /* TODO> && !isADBVirtualKeyOrAnyOtherKeyThatWeNeedToHandleAKAWhenMonkeyTestOrWHATEVER! */) {
+                if (DEBUG_INPUT) {
+                    Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: mNavBarEnabled, discard hw event.");
+                }
+                // Don't allow key events from hw keys when navbar is enabled.
+                return 0;
+            } else if (!interactive) {
+                if (DEBUG_INPUT) {
+                    Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: screen not interactive, discard hw event.");
+                }
+                // Ensure nav keys are handled on full interactive screen only.
+                return 0;
+            } else if (interactive) {
+                if (!down) {
+                    // Make sure we consume hw key events properly. Discard them
+                    // here if the event is already been consumed. This case can
+                    // happen when we send virtual key events and the virtual
+                    // ACTION_UP is sent before the hw ACTION_UP resulting in
+                    // handling twice an action up event.
+                    final boolean consumed = isKeyConsumed(keyCode);
+                    if (consumed) {
+                        if (DEBUG_INPUT) {
+                            Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: event already consumed, discard hw event.");
+                        }
+                        setKeyConsumed(keyCode, !consumed);
+                        return 0;
+                    }
+                } else {
+                    hapticFeedbackRequested = true;
+                }
+            }
         }
 
         // Pre-basic policy based on interactive and pocket lock state.
