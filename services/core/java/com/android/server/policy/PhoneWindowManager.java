@@ -153,6 +153,7 @@ import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.hardware.display.DisplayManager;
+import android.hardware.input.InputManager;
 import android.hardware.hdmi.HdmiControlManager;
 import android.hardware.hdmi.HdmiPlaybackClient;
 import android.hardware.hdmi.HdmiPlaybackClient.OneTouchPlayCallback;
@@ -203,7 +204,6 @@ import android.util.LongSparseArray;
 import android.util.MutableBoolean;
 import android.util.Slog;
 import android.util.SparseArray;
-import android.util.LongSparseArray;
 import android.util.SparseBooleanArray;
 import android.util.SparseIntArray;
 import android.view.Display;
@@ -236,6 +236,7 @@ import android.view.animation.AnimationSet;
 import android.view.animation.AnimationUtils;
 import android.view.autofill.AutofillManagerInternal;
 import android.view.inputmethod.InputMethodManagerInternal;
+import android.widget.Toast;
 
 import com.android.internal.R;
 import com.android.internal.annotations.GuardedBy;
@@ -643,6 +644,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     boolean mUseTvRouting;
 
     private boolean mHandleVolumeKeysInWM;
+    int mDeviceHardwareKeys;
 
     int mDeviceHardwareKeys;
 
@@ -775,8 +777,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     int mMetaState;
     int mInitialMetaState;
     boolean mForceShowSystemBars;
-
-    boolean mNavBarEnabled = false;
 
     // Custom policy for #SUPPORTED_KEYCODES_LIST key codes.
     private SparseBooleanArray mKeyPressed = new SparseBooleanArray(SUPPORTED_KEYCODE_LIST.length);
@@ -2127,39 +2127,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     }
 
-    private void preloadActivityManager() {
-        if (mActivityManager == null) {
-            mActivityManager = ActivityManager.getService();
-        }
-    }
-
-    private boolean isScreenPinningOn() {
-        preloadActivityManager();
-        try {
-            return mActivityManager.isInLockTaskMode();
-        } catch (RemoteException|NullPointerException e) {
-            // no-op
-        }
-        return false;
-    }
-
-    private void stopScreenPinning() {
-        preloadActivityManager();
-        try {
-            mActivityManager.stopSystemLockTaskMode();
-            performHapticFeedbackLw(null, HapticFeedbackConstants.LONG_PRESS, false);
-            // Keep updating system ui visibility from UI thread.
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    updateSystemUiVisibilityLw();
-                }
-            });
-        } catch (RemoteException|NullPointerException e) {
-            // no-op
-        }
-    }
-
     private boolean isRoundWindow() {
         return mContext.getResources().getConfiguration().isScreenRound();
     }
@@ -2486,28 +2453,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                         mWindowManagerFuncs.notifyKeyguardTrustedChanged();
                     }
                 });
-
-        String deviceKeyHandlerLib = mContext.getResources().getString(
-                com.android.internal.R.string.config_deviceKeyHandlerLib);
-
-        String deviceKeyHandlerClass = mContext.getResources().getString(
-                com.android.internal.R.string.config_deviceKeyHandlerClass);
-
-        if (!deviceKeyHandlerLib.isEmpty() && !deviceKeyHandlerClass.isEmpty()) {
-            PathClassLoader loader =  new PathClassLoader(deviceKeyHandlerLib,
-                    getClass().getClassLoader());
-            try {
-                Class<?> klass = loader.loadClass(deviceKeyHandlerClass);
-                Constructor<?> constructor = klass.getConstructor(Context.class);
-                mDeviceKeyHandler = (DeviceKeyHandler) constructor.newInstance(
-                        mContext);
-                if(DEBUG) Slog.d(TAG, "Device key handler loaded");
-            } catch (Exception e) {
-                Slog.w(TAG, "Could not instantiate device key handler "
-                        + deviceKeyHandlerClass + " from class "
-                        + deviceKeyHandlerLib, e);
-            }
-        }
 
         // Custom input policy settings.
         for (int i = 0; i < SUPPORTED_KEYCODE_LIST.length; i++) {
@@ -3992,10 +3937,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             case KEY_ACTION_HOME:
                 launchHomeFromHotKey();
                 break;
-            case KEY_ACTION_MENU:
-                triggerVirtualKeypress(KeyEvent.KEYCODE_MENU, false);
-                break;
             case KEY_ACTION_BACK:
+            case KEY_ACTION_MENU:
             case KEY_ACTION_IN_APP_SEARCH:
                 triggerVirtualKeypress(keyCode, false);
                 break;
@@ -4070,7 +4013,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         final boolean appSwitchKey = keyCode == KeyEvent.KEYCODE_APP_SWITCH;
         final boolean homeKey = keyCode == KeyEvent.KEYCODE_HOME;
         final boolean menuKey = keyCode == KeyEvent.KEYCODE_MENU;
-        final boolean backKey = keyCode == KeyEvent.KEYCODE_BACK;
 
         final boolean keyguardOn = keyguardOn();
 
@@ -4140,18 +4082,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             mPendingCapsLockToggle = false;
         }
 
-        // Screen pinning within back key early check-in.
-        if (backKey) {
-            if (down && !isCustomSource) {
-                if (repeatCount == 0 && isScreenPinningOn()) {
-                    preloadActivityManager();
-                } else if (longPress && isScreenPinningOn()) {
-                    stopScreenPinning();
-                    return -1;
-                }
-            }
-        }
-
         // Custom event handling for supported key codes.
         if (canApplyCustomPolicy(keyCode) && !isCustomSource) {
             if ((menuKey || appSwitchKey) && keyguardOn) {
@@ -4204,7 +4134,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             if (homeKey) {
                 // If a system window has focus, then it doesn't make sense
                 // right now to interact with applications.
-                WindowManager.LayoutParams attrs = win != null ? win.getAttrs() : null;
+                WindowManager.LayoutParams attrs = (win != null ? win.getAttrs() : null);
                 if (attrs != null) {
                     final int type = attrs.type;
                     if (type == WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG
@@ -4920,7 +4850,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             startActivityAsUser(intent, UserHandle.CURRENT);
         } catch (ActivityNotFoundException e) {
             Slog.w(TAG, "No activity to handle assist long press action.", e);
-            // TODO> show informative toast.
+            Toast.makeText(mContext, "Search assistant not available.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -6850,7 +6780,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         // Apply custom policy for supported key codes.
         if (canApplyCustomPolicy(keyCode) && !isCustomSource) {
-            if (mNavBarEnabled && !navBarKey /* TODO> && !isADBVirtualKeyOrAnyOtherKeyThatWeNeedToHandleAKAWhenMonkeyTestOrWHATEVER! */) {
+            if (mNavBarEnabled && !navBarKey) {
                 if (DEBUG_INPUT) {
                     Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: mNavBarEnabled, discard hw event.");
                 }
