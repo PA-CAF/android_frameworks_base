@@ -3990,6 +3990,12 @@ public final class Settings {
          */
         public static final String GESTURE_DOUBLE_TAP_SLEEP = "gesture_double_tap_sleep";
 
+	/**
+         * Volume rocker wake
+         * @hide
+         */
+        public static final String VOLUME_ROCKER_WAKE = "volume_rocker_wake";
+
         /**
          * Whether allowing pocket service to register sensors and dispatch informations.
          *   0 = disabled
