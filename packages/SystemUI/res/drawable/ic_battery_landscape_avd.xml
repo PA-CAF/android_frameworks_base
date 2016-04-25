@@ -14,18 +14,11 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_battery_landscape_fill" >
 
-    <item
-        android:id="@+id/battery_frame"
-        android:drawable="@drawable/ic_battery_circle_frame" />
+    <target
+        android:name="battery_level"
+        android:animation="@anim/battery_landscape" />
 
-    <item
-        android:id="@+id/battery_fill"
-        android:drawable="@drawable/ic_battery_circle_avd" />
-
-    <item
-        android:id="@+id/battery_charge_indicator"
-        android:drawable="@drawable/ic_battery_bolt" />
-
-</layer-list>
+</animated-vector>
