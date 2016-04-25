@@ -23,6 +23,7 @@ import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.annotation.Nullable;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
@@ -600,6 +601,7 @@ public class BatteryMeterDrawable extends Drawable implements
         } else {
             bolt = ((BitmapDrawable) boltDrawable).getBitmap();
         }
+    }
 
         return bolt;
     }
@@ -621,6 +623,9 @@ public class BatteryMeterDrawable extends Drawable implements
             } else {
                 d.setAlpha(mPluggedIn ? 255 : 0);
             }
+            Rect bounds = boltDrawable.getBounds();
+            newBoltDrawable = new BitmapDrawable(mContext.getResources(), boltBitmap);
+            newBoltDrawable.setBounds(bounds);
         }
 
         // Now draw the level indicator
@@ -669,6 +674,15 @@ public class BatteryMeterDrawable extends Drawable implements
     private class BatteryMeterDrawableException extends RuntimeException {
         public BatteryMeterDrawableException(String detailMessage) {
             super(detailMessage);
+        }
+        if ((gravity & Gravity.END) == Gravity.END) {
+            return isRtl ? Paint.Align.LEFT : Paint.Align.RIGHT;
+        }
+        if ((gravity & Gravity.LEFT) == Gravity.LEFT) return Paint.Align.LEFT;
+        if ((gravity & Gravity.RIGHT) == Gravity.RIGHT) return Paint.Align.RIGHT;
+
+        public BatteryMeterDrawableException(String detailMessage, Throwable throwable) {
+            super(detailMessage, throwable);
         }
 
         public BatteryMeterDrawableException(String detailMessage, Throwable throwable) {
