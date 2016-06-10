@@ -23,7 +23,6 @@ import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.annotation.Nullable;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
@@ -64,12 +63,6 @@ public class BatteryMeterDrawable extends Drawable implements
 
     private final Context mContext;
     private final Handler mHandler;
-
-    // Values for the different battery styles
-    public static final int BATTERY_STYLE_PORTRAIT  = 0;
-    public static final int BATTERY_STYLE_CIRCLE    = 2;
-    public static final int BATTERY_STYLE_HIDDEN    = 4;
-    public static final int BATTERY_STYLE_TEXT      = 5;
 
     private final int[] mColors;
     private final int mIntrinsicWidth;
@@ -622,9 +615,6 @@ public class BatteryMeterDrawable extends Drawable implements
             } else {
                 d.setAlpha(mPluggedIn ? 255 : 0);
             }
-            Rect bounds = boltDrawable.getBounds();
-            newBoltDrawable = new BitmapDrawable(mContext.getResources(), boltBitmap);
-            newBoltDrawable.setBounds(bounds);
         }
 
         // Now draw the level indicator
