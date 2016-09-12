@@ -853,6 +853,7 @@
     <!-- HTTP proxy settings. The hint text field for the hostname. -->
     <string name="proxy_hostname_hint" translatable="false">proxy.example.com</string>
 
+    <string name="screen_zoom_summary_smaller">Smaller</string>
     <!-- Description for the screen zoom level that makes interface elements smallest. [CHAR LIMIT=24] -->
     <string name="screen_zoom_summary_smallest">Smallest</string>
     <!-- Description for the screen zoom level that makes interface elements small. [CHAR LIMIT=24] -->
