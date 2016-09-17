@@ -501,6 +501,35 @@ public final class PowerManager {
     public int getDefaultButtonBrightnessSetting() {
         return mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_buttonBrightnessSettingDefault);
+    }
+
+    /**
+     * Gets the minimum supported screen brightness setting for VR Mode.
+     * @hide
+     */
+    public int getMinimumButtonBrightnessSetting() {
+        return mContext.getResources().getInteger(
+                com.android.internal.R.integer.config_buttonBrightnessSettingMinimum);
+    }
+
+    /**
+     * Gets the maximum supported button brightness setting.
+     * The screen may be allowed to become dimmer than this value but
+     * this is the maximum value that can be set by the user.
+     * @hide
+     */
+    public int getMaximumButtonBrightnessSetting() {
+        return mContext.getResources().getInteger(
+                com.android.internal.R.integer.config_buttonBrightnessSettingMaximum);
+    }
+
+    /**
+     * Gets the default button brightness setting.
+     * @hide
+     */
+    public int getDefaultButtonBrightnessSetting() {
+        return mContext.getResources().getInteger(
+                com.android.internal.R.integer.config_buttonBrightnessSettingDefault);
     }    
 
     /**

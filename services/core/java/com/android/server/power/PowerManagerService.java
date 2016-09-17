@@ -177,6 +177,9 @@ public final class PowerManagerService extends SystemService
     // Default value for buttons lights timeout
     private static final int BUTTON_ON_DURATION = 5000;
 
+    // Default setting for double tap to wake.
+    private static final int DEFAULT_DOUBLE_TAP_TO_WAKE = 0;
+
     /** Constants for {@link #shutdownOrRebootInternal} */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({HALT_MODE_SHUTDOWN, HALT_MODE_REBOOT, HALT_MODE_REBOOT_SAFE_MODE})
@@ -672,6 +675,7 @@ public final class PowerManagerService extends SystemService
             mScreenBrightnessSettingMinimum = pm.getMinimumScreenBrightnessSetting();
             mScreenBrightnessSettingMaximum = pm.getMaximumScreenBrightnessSetting();
             mScreenBrightnessSettingDefault = pm.getDefaultScreenBrightnessSetting();
+            mScreenBrightnessForVrSettingDefault = pm.getDefaultScreenBrightnessForVrSetting();
             mButtonBrightnessSettingMinimum = pm.getMinimumButtonBrightnessSetting();
             mButtonBrightnessSettingMaximum = pm.getMaximumButtonBrightnessSetting();
             mButtonBrightnessSettingDefault = pm.getDefaultButtonBrightnessSetting();
@@ -796,6 +800,15 @@ public final class PowerManagerService extends SystemService
             resolver.registerContentObserver(Settings.Secure.getUriFor(
                     Secure.BRIGHTNESS_USE_TWILIGHT),
                     false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.BUTTON_BRIGHTNESS),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.BUTTON_BRIGHTNESS_ENABLED),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.NAVIGATION_BAR_ENABLED),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
             IVrManager vrManager =
                     (IVrManager) getBinderService(VrManagerService.VR_MANAGER_BINDER_SERVICE);
             try {
@@ -804,9 +817,6 @@ public final class PowerManagerService extends SystemService
                 Slog.e(TAG, "Failed to register VR mode state listener: " + e);
             }
 
-            resolver.registerContentObserver(Settings.System.getUriFor(
-                    Settings.System.PROXIMITY_ON_WAKE),
-                    false, mSettingsObserver, UserHandle.USER_ALL);
             // Go.
             readConfigurationLocked();
             updateSettingsLocked();
@@ -1131,16 +1141,9 @@ public final class PowerManagerService extends SystemService
             mButtonBrightnessEnabled = buttonBrightnessEnabled;
         }
 
-        final boolean defaultToNavigationBar = resources
-                .getBoolean(com.android.internal.R.bool.config_defaultToNavigationBar);
         final boolean navBarEnabled = Settings.System.getIntForUser(resolver,
-                Settings.System.NAVIGATION_BAR_ENABLED, defaultToNavigationBar ? 1 : 0,
-                        UserHandle.USER_CURRENT) != 0;
+                Settings.System.NAVIGATION_BAR_ENABLED, 0, UserHandle.USER_CURRENT) != 0;
         mButtonBrightnessEnabled &= !navBarEnabled;
-
-        mProximityWakeEnabled = Settings.System.getInt(resolver,
-                Settings.System.PROXIMITY_ON_WAKE,
-                mProximityWakeEnabledByDefaultConfig ? 1 : 0) == 1;
 
         mDirty |= DIRTY_SETTINGS;
     }
