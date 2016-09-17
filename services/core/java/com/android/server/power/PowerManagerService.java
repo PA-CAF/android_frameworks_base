@@ -177,6 +177,9 @@ public final class PowerManagerService extends SystemService
     // Default value for buttons lights timeout
     private static final int BUTTON_ON_DURATION = 5000;
 
+    // Default setting for double tap to wake.
+    private static final int DEFAULT_DOUBLE_TAP_TO_WAKE = 0;
+
     /** Constants for {@link #shutdownOrRebootInternal} */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({HALT_MODE_SHUTDOWN, HALT_MODE_REBOOT, HALT_MODE_REBOOT_SAFE_MODE})
@@ -1137,11 +1140,8 @@ public final class PowerManagerService extends SystemService
             mButtonBrightnessEnabled = buttonBrightnessEnabled;
         }
 
-        final boolean defaultToNavigationBar = resources
-                .getBoolean(com.android.internal.R.bool.config_defaultToNavigationBar);
         final boolean navBarEnabled = Settings.System.getIntForUser(resolver,
-                Settings.System.NAVIGATION_BAR_ENABLED, defaultToNavigationBar ? 1 : 0,
-                        UserHandle.USER_CURRENT) != 0;
+                Settings.System.NAVIGATION_BAR_ENABLED, 0, UserHandle.USER_CURRENT) != 0;
         mButtonBrightnessEnabled &= !navBarEnabled;
 
         mDirty |= DIRTY_SETTINGS;
