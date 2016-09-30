@@ -16,6 +16,9 @@
 
 package com.android.systemui.qs.tiles;
 
+import android.app.NotificationManager;
+import android.app.NotificationManager.Policy;
+import android.os.Bundle;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
@@ -24,16 +27,24 @@ import android.provider.Settings;
 import android.service.notification.ZenModeConfig;
 import android.text.SpannableStringBuilder;
 import android.text.style.ForegroundColorSpan;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.CompoundButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import com.android.internal.logging.MetricsProto.MetricsEvent;
 import com.android.internal.logging.MetricsLogger;
 
+import com.android.systemui.Prefs;
 import com.android.systemui.R;
 import com.android.systemui.qs.QSTile;
 import com.android.systemui.statusbar.policy.ZenModeController;
@@ -45,29 +56,42 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
     private static final Intent ZEN_SETTINGS =
             new Intent(Settings.ACTION_ZEN_MODE_SETTINGS);
 
+    private static final Intent ZEN_PRIORITY_SETTINGS =
+            new Intent(Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS);
+
     private static final QSTile.Icon TOTAL_SILENCE =
             ResourceIcon.get(R.drawable.ic_qs_dnd_on_total_silence);
 
     private static final QSTile.Icon ALARMS_ONLY =
             ResourceIcon.get(R.drawable.ic_qs_dnd_on);
 
+    private static final QSTile.Icon PRIORITY_ONLY =
+            ResourceIcon.get(R.drawable.ic_qs_dnd_on_priority);
+
     private static final QSTile.Icon DISABLED =
             ResourceIcon.get(R.drawable.ic_qs_dnd_off);
 
     private final ZenModeController mController;
     private final AlertSliderDetailAdapter mDetailAdapter;
+    private Policy mPolicy;
 
     private boolean mListening;
+    private boolean mHasAlertSlider = false;
+    private boolean mCollapseDetailOnZenChanged = true;
 
     public AlertSliderTile(Host host) {
         super(host);
         mController = host.getZenModeController();
         mDetailAdapter = new AlertSliderDetailAdapter();
+        mHasAlertSlider = mContext.getResources().getBoolean(com.android.internal.R.bool.config_hasAlertSlider)
+                && !TextUtils.isEmpty(mContext.getResources().getString(com.android.internal.R.string.alert_slider_state_path))
+                && !TextUtils.isEmpty(mContext.getResources().getString(com.android.internal.R.string.alert_slider_uevent_match_path));
+        mPolicy = NotificationManager.from(mContext).getNotificationPolicy();
     }
 
     @Override
     public CharSequence getTileLabel() {
-        return mContext.getString(R.string.quick_settings_alert_slider_title);
+        return mContext.getString(R.string.quick_settings_dnd_label);
     }
 
     @Override
@@ -87,7 +111,9 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
 
     @Override
     protected void handleClick() {
-        if (shouldShow()) {
+        mCollapseDetailOnZenChanged = true;
+        final int zen = getZenMode();
+        if (zen != Settings.Global.ZEN_MODE_OFF) {
             showDetail(true);
         }
     }
@@ -100,53 +126,36 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
 
     @Override
     public boolean isAvailable() {
-        return ZenModeConfig.hasAlertSlider(mContext);
-    }
-
-    private boolean shouldShow() {
-        return (getZenMode() == Settings.Global.ZEN_MODE_NO_INTERRUPTIONS
-                || getZenMode() == Settings.Global.ZEN_MODE_ALARMS);
+        return mHasAlertSlider;
     }
 
     @Override
     protected void handleUpdateState(State state, Object arg) {
         final int zen = arg instanceof Integer ? (Integer) arg : getZenMode();
-        state.icon = DISABLED;
-        state.label = mContext.getString(R.string.quick_settings_alert_slider_title);
-        if (!shouldShow()) {
-            Drawable icon = mContext.getDrawable(R.drawable.ic_qs_dnd_off)
-                    .mutate();
-            final int disabledColor = mContext.getColor(R.color.qs_tile_tint_unavailable);
-            icon.setTint(disabledColor);
-            state.icon = new DrawableIcon(icon);
-            state.label = new SpannableStringBuilder().append(state.label,
-                    new ForegroundColorSpan(disabledColor),
-                    SpannableStringBuilder.SPAN_INCLUSIVE_INCLUSIVE);
-
-            state.contentDescription = mContext.getString(
-                    R.string.quick_settings_alert_slider_unavailable);
-            return;
-        }
         switch (zen) {
+            case Settings.Global.ZEN_MODE_IMPORTANT_INTERRUPTIONS:
+                state.icon = PRIORITY_ONLY;
+                state.label = mContext.getString(R.string.quick_settings_dnd_priority_label);
+                state.contentDescription = mContext.getString(
+                        R.string.accessibility_quick_settings_dnd_priority_on);
+                break;
             case Settings.Global.ZEN_MODE_NO_INTERRUPTIONS:
                 state.icon = TOTAL_SILENCE;
                 state.label = mContext.getString(R.string.quick_settings_dnd_none_label);
                 state.contentDescription = mContext.getString(
                         R.string.accessibility_quick_settings_dnd_none_on);
-                if (mDetailAdapter != null) {
-                    mDetailAdapter.setMessageText(R.string.quick_settings_alert_slider_detail_no_interruptions_description);
-                }
                 break;
             case Settings.Global.ZEN_MODE_ALARMS:
                 state.icon = ALARMS_ONLY;
                 state.label = mContext.getString(R.string.quick_settings_dnd_alarms_label);
                 state.contentDescription = mContext.getString(
                         R.string.accessibility_quick_settings_dnd_alarms_on);
-                if (mDetailAdapter != null) {
-                    mDetailAdapter.setMessageText(R.string.quick_settings_alert_slider_detail_alarms_only_description);
-                }
                 break;
             default:
+                state.icon = DISABLED;
+                state.label = mContext.getString(R.string.quick_settings_alert_slider_none_label);
+                state.contentDescription = mContext.getString(
+                        R.string.accessibility_quick_settings_dnd_off);
                 break;
         }
     }
@@ -166,13 +175,13 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
 
     @Override
     protected String composeChangeAnnouncement() {
-        return "";
+        return ""; // TODO
     }
 
     @Override
     public void setListening(boolean listening) {
         if (mListening == listening) return;
-        mListening = listening && ZenModeConfig.hasAlertSlider(mContext);
+        mListening = listening;
         if (mListening) {
             mController.addCallback(mZenCallback);
         } else {
@@ -182,18 +191,26 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
 
     private final ZenModeController.Callback mZenCallback = new ZenModeController.Callback() {
         public void onZenChanged(int zen) {
+            if (mCollapseDetailOnZenChanged) {
+                showDetail(false);
+            }
             refreshState(zen);
+            mCollapseDetailOnZenChanged = true;
         }
     };
 
     private final class AlertSliderDetailAdapter implements DetailAdapter {
 
         private SegmentedButtons mButtons;
-        private TextView mMessageText;
+        private TextView mMessageText, mZenPriorityIntroductionCustomize;
+        private RelativeLayout mMessageBox;
+        private RelativeLayout mRemindersSwitchContainer, mEventsSwitchContainer, mZenPriorityIntroduction;
+        private Switch mReminders, mEvents;
+        private ImageView mZenPriorityIntroductionConfirm;
 
         @Override
         public CharSequence getTitle() {
-            return mContext.getString(R.string.quick_settings_alert_slider_title);
+            return mContext.getString(R.string.quick_settings_dnd_label);
         }
 
         @Override
@@ -222,24 +239,129 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
 
             int state = getZenMode();
 
+            mCollapseDetailOnZenChanged = true;
+
             if (convertView == null) {
                 mButtons = (SegmentedButtons) details.findViewById(R.id.alert_slider_buttons);
                 mMessageText = (TextView) details.findViewById(R.id.alert_slider_introduction_message);
-                mButtons.addButton(R.string.quick_settings_alert_slider_alarms_only_label_twoline,
-                        R.string.quick_settings_alert_slider_alarms_only_label,
+                mMessageBox = (RelativeLayout) details.findViewById(R.id.alert_slider_introduction);
+                mZenPriorityIntroduction = (RelativeLayout) details.findViewById(R.id.zen_introduction);
+                mZenPriorityIntroductionConfirm = (ImageView) details.findViewById(R.id.zen_introduction_confirm);
+                mZenPriorityIntroductionConfirm.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Prefs.putBoolean(mContext, Prefs.Key.DND_CONFIRMED_PRIORITY_INTRODUCTION, true);
+                    }
+                });
+                mZenPriorityIntroductionCustomize = (TextView) details.findViewById(R.id.zen_introduction_customize);
+                mZenPriorityIntroductionCustomize.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Prefs.putBoolean(mContext, Prefs.Key.DND_CONFIRMED_PRIORITY_INTRODUCTION, true);
+                        mHost.startActivityDismissingKeyguard(ZEN_PRIORITY_SETTINGS);
+                    }
+                });
+                mRemindersSwitchContainer = (RelativeLayout) details.findViewById(R.id.switch_container_reminders);
+                mRemindersSwitchContainer.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if (mReminders != null) {
+                            final boolean isChecked = mReminders.isChecked();
+                            mReminders.setChecked(!isChecked);
+                        }
+                    }
+                });
+                mReminders = (Switch) details.findViewById(R.id.toggle_reminders);
+                mReminders.setChecked(isPriorityCategoryEnabled(Policy.PRIORITY_CATEGORY_REMINDERS));
+                mReminders.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        MetricsLogger.action(mContext, MetricsEvent.ACTION_ZEN_ALLOW_REMINDERS, isChecked);
+                        if (DEBUG) Log.d(TAG, "onPrefChange allowReminders=" + isChecked);
+                        savePolicy(getNewPriorityCategories(isChecked, Policy.PRIORITY_CATEGORY_REMINDERS),
+                                mPolicy.priorityCallSenders, mPolicy.priorityMessageSenders,
+                                mPolicy.suppressedVisualEffects);
+                    }
+                });
+                mEventsSwitchContainer = (RelativeLayout) details.findViewById(R.id.switch_container_events);
+                mEventsSwitchContainer.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if (mEvents != null) {
+                            final boolean isChecked = mEvents.isChecked();
+                            mEvents.setChecked(!isChecked);
+                        }
+                    }
+                });
+                mEvents = (Switch) details.findViewById(R.id.toggle_events);
+                mEvents.setChecked(isPriorityCategoryEnabled(Policy.PRIORITY_CATEGORY_EVENTS));
+                mEvents.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        MetricsLogger.action(mContext, MetricsEvent.ACTION_ZEN_ALLOW_EVENTS, isChecked);
+                        if (DEBUG) Log.d(TAG, "onPrefChange allowEvents=" + isChecked);
+                        savePolicy(getNewPriorityCategories(isChecked, Policy.PRIORITY_CATEGORY_EVENTS),
+                                mPolicy.priorityCallSenders, mPolicy.priorityMessageSenders,
+                                mPolicy.suppressedVisualEffects);
+                    }
+                });
+                mButtons.addButton(R.string.interruption_level_alarms_twoline,
+                        R.string.quick_settings_dnd_alarms_label,
                         Settings.Global.ZEN_MODE_ALARMS);
-                mButtons.addButton(R.string.quick_settings_alert_slider_no_interruptions_label_twoline,
-                        R.string.quick_settings_alert_slider_no_interruptions_label,
+                mButtons.addButton(R.string.interruption_level_none_twoline,
+                        R.string.quick_settings_dnd_none_label,
                         Settings.Global.ZEN_MODE_NO_INTERRUPTIONS);
                 mButtons.setCallback(mButtonsCallback);
-                // Init current state.
-                mButtons.setSelectedValue(state, false /* fromClick */);
-                mMessageText.setText(mContext.getString(state == Settings.Global.ZEN_MODE_NO_INTERRUPTIONS
-                    ? R.string.quick_settings_alert_slider_detail_no_interruptions_description
-                    : R.string.quick_settings_alert_slider_detail_alarms_only_description));
             }
 
+            mButtons.setSelectedValue(state, false /* fromClick */);
+            refresh(state);
+
             return details;
+        }
+
+        private void refresh(int state) {
+            switch(state) {
+                case Settings.Global.ZEN_MODE_ALARMS:
+                    // silent
+                    mButtons.setVisibility(View.VISIBLE);
+                    mMessageBox.setVisibility(View.VISIBLE);
+                    mMessageText.setText(mContext.getString(R.string.quick_settings_alert_slider_detail_alarms_only_description));
+                    // priority
+                    mRemindersSwitchContainer.setVisibility(View.GONE);
+                    mEventsSwitchContainer.setVisibility(View.GONE);
+                    mZenPriorityIntroduction.setVisibility(View.GONE);
+                    break;
+                case Settings.Global.ZEN_MODE_NO_INTERRUPTIONS:
+                    // silent
+                    mButtons.setVisibility(View.VISIBLE);
+                    mMessageBox.setVisibility(View.VISIBLE);
+                    mMessageText.setText(mContext.getString(R.string.zen_silence_introduction_voice));
+                    // priority
+                    mRemindersSwitchContainer.setVisibility(View.GONE);
+                    mEventsSwitchContainer.setVisibility(View.GONE);
+                    mZenPriorityIntroduction.setVisibility(View.GONE);
+                    break;
+                case Settings.Global.ZEN_MODE_IMPORTANT_INTERRUPTIONS:
+                    // silent
+                    mButtons.setVisibility(View.GONE);
+                    mMessageBox.setVisibility(View.GONE);
+                    // priority
+                    mRemindersSwitchContainer.setVisibility(View.VISIBLE);
+                    mEventsSwitchContainer.setVisibility(View.VISIBLE);
+                    final boolean confirmed =  false; // Prefs.getBoolean(mContext, Prefs.Key.DND_CONFIRMED_PRIORITY_INTRODUCTION, false);
+                    mZenPriorityIntroductionConfirm.setVisibility(View.GONE);
+                    mZenPriorityIntroduction.setVisibility(!confirmed ? View.VISIBLE : View.GONE);
+                    break;
+                default:
+                    mButtons.setVisibility(View.GONE);
+                    mMessageBox.setVisibility(View.VISIBLE);
+                    mMessageText.setText(mContext.getString(R.string.zen_silence_introduction_voice));
+                    mRemindersSwitchContainer.setVisibility(View.GONE);
+                    mEventsSwitchContainer.setVisibility(View.GONE);
+                    mZenPriorityIntroduction.setVisibility(View.GONE);
+                    break;
+            }
         }
 
         private final SegmentedButtons.Callback mButtonsCallback = new SegmentedButtons.Callback() {
@@ -250,10 +372,10 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
                     int state = (Integer) value;
                     if (fromClick) {
                         MetricsLogger.action(mContext, MetricsEvent.QS_DND, state);
-                        setSilentState(state);
+                        mCollapseDetailOnZenChanged = false;
+                        setSilentMode(state);
                         setZenMode(state);
-                        refreshState(state);
-                        showDetail(false);
+                        refresh(state);
                     }
                 }
             }
@@ -262,16 +384,31 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
             public void onInteraction() { }
         };
 
-        public void setMessageText(int stringRes) {
-            if (mMessageText != null) {
-                mMessageText.setText(mContext.getString(stringRes));
-            }
-        }
-
-        public void setSilentState(int state) {
-            int silentMode = state != Settings.Global.ZEN_MODE_ALARMS ? 1 : 0;
+        public void setSilentMode(int silentState) {
+            int silentMode = silentState == Settings.Global.ZEN_MODE_ALARMS ? 0 : 1;
             Settings.System.putIntForUser(mContext.getContentResolver(),
                     Settings.System.ALERT_SLIDER_SILENT_MODE, silentMode, UserHandle.USER_CURRENT);
         }
+    }
+
+    private boolean isPriorityCategoryEnabled(int categoryType) {
+        return (mPolicy.priorityCategories & categoryType) != 0;
+    }
+
+    private int getNewPriorityCategories(boolean allow, int categoryType) {
+        int priorityCategories = mPolicy.priorityCategories;
+        if (allow) {
+            priorityCategories |= categoryType;
+        } else {
+            priorityCategories &= ~categoryType;
+        }
+        return priorityCategories;
+    }
+
+    private void savePolicy(int priorityCategories, int priorityCallSenders,
+            int priorityMessageSenders, int suppressedVisualEffects) {
+        mPolicy = new Policy(priorityCategories, priorityCallSenders, priorityMessageSenders,
+                suppressedVisualEffects);
+        NotificationManager.from(mContext).setNotificationPolicy(mPolicy);
     }
 }
