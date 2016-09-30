@@ -113,6 +113,7 @@ import android.service.notification.ZenModeConfig;
 import android.speech.RecognizerIntent;
 import android.telecom.TelecomManager;
 import android.service.gesture.EdgeGestureManager;
+import android.text.TextUtils;
 import android.util.BoostFramework;
 import android.util.DisplayMetrics;
 import android.util.EventLog;
@@ -848,6 +849,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
     private boolean mTopWindowIsKeyguard;
 
+    private boolean mHasAlertSlider = false;
+
     private class PolicyHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
@@ -1024,6 +1027,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.KEY_CAMERA_DOUBLE_TAP_ACTION), false, this,
+                    UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.ALERT_SLIDER_ORDER), false, this,
                     UserHandle.USER_ALL);
             updateSettings();
         }
@@ -1905,6 +1911,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mPowerManagerInternal = LocalServices.getService(PowerManagerInternal.class);
         mAppOpsManager = (AppOpsManager) mContext.getSystemService(Context.APP_OPS_SERVICE);
         mHasFeatureWatch = mContext.getPackageManager().hasSystemFeature(FEATURE_WATCH);
+
+        mHasAlertSlider = mContext.getResources().getBoolean(R.bool.config_hasAlertSlider)
+                && !TextUtils.isEmpty(mContext.getResources().getString(R.string.alert_slider_state_path))
+                && !TextUtils.isEmpty(mContext.getResources().getString(R.string.alert_slider_uevent_match_path));
 
 
         // Initialise Keypress Boost
@@ -8141,6 +8151,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         mEdgeGestureManager = EdgeGestureManager.getInstance();
         mEdgeGestureManager.setEdgeGestureActivationListener(mEdgeGestureActivationListener);
+
+        if (mHasAlertSlider) {
+            mAlertSliderObserver = new AlertSliderObserver(mContext);
+            mAlertSliderObserver.startObserving(com.android.internal.R.string.alert_slider_uevent_match_path);
+        }
 
         readCameraLensCoverState();
         updateUiMode();
