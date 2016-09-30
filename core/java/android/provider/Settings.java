@@ -3735,6 +3735,22 @@ public final class Settings {
         };
 
         /**
+        public static final String ALERT_SLIDER_SILENT_MODE = "alert_slider_silent_mode";
+         */
+         * @hide
+         * 1: Total silence
+         * 0: Alarms only.
+         * Preferred silent mode for Alert Slider..
+        /**
+
+        public static final String ALERT_SLIDER_ORDER = "alert_slider_order";
+         */
+         * @hide
+         * 1: Inverted
+         * 0: Default
+         * * Whether user can invert the order of the Alert Slider.
+         * Whether user can swap the order of the Alert Slider.
+        /**
          * Settings to backup. This is here so that it's in the same place as the settings
          * keys and easy to update.
          *
@@ -3742,7 +3758,7 @@ public final class Settings {
          *       in this array. If you have one setting depending on another,
          *       make sure that they are ordered appropriately.
          *
-         * @hide
+         *@hide
          */
         public static final String[] SETTINGS_TO_BACKUP = {
             STAY_ON_WHILE_PLUGGED_IN,   // moved to global
