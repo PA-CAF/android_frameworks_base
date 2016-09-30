@@ -594,6 +594,9 @@ public class AudioService extends IAudioService.Stub {
     public static final String CONNECT_INTENT_KEY_HAS_MIDI = "hasMIDI";
     public static final String CONNECT_INTENT_KEY_DEVICE_CLASS = "class";
 
+    // Alert slider
+    private boolean mHasAlertSlider = false;
+
     // Defines the format for the connection "address" for ALSA devices
     public static String makeAlsaAddressString(int card, int device) {
         return "card=" + card + ";device=" + device + ";";
@@ -639,6 +642,8 @@ public class AudioService extends IAudioService.Stub {
 
         Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         mHasVibrator = vibrator == null ? false : vibrator.hasVibrator();
+
+        mHasAlertSlider = mContext.getResources().getBoolean(com.android.internal.R.bool.config_hasAlertSlider);
 
         // Initialize volume
         int maxVolume = SystemProperties.getInt("ro.config.vc_call_vol_steps",
@@ -1306,7 +1311,7 @@ public class AudioService extends IAudioService.Stub {
         } else {
             streamType = getActiveStreamType(suggestedStreamType);
         }
-        if (ZenModeConfig.hasAlertSlider(mContext)) {
+        if (mHasAlertSlider) {
             int volumeType = mStreamVolumeAlias[streamType];
             VolumeStreamState volumeState = mStreamStates[volumeType];
             int state = getDeviceForStream(volumeType);
@@ -1320,7 +1325,9 @@ public class AudioService extends IAudioService.Stub {
             if ((ringerMode == AudioManager.RINGER_MODE_SILENT)
                     && (direction == AudioManager.ADJUST_RAISE
                     && volumeType != AudioSystem.STREAM_MUSIC
-                    && volumeType != AudioSystem.STREAM_ALARM)) {
+                    && volumeType != AudioSystem.STREAM_ALARM
+                    && volumeType != AudioSystem.STREAM_VOICE_CALL
+                    && !isInCommunication())) {
                 direction = AudioManager.ADJUST_SAME;
             }
         }
