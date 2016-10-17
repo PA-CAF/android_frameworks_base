@@ -175,7 +175,8 @@ public class KeyguardStatusBarView extends RelativeLayout
             }
         }
 
-        mBatteryLevel.setVisibility(mShowBatteryText ? View.VISIBLE : View.GONE);
+        mBatteryLevel.setVisibility(
+                mBatteryCharging || mShowBatteryText ? View.VISIBLE : View.GONE);
     }
 
     private void updateSystemIconsLayoutParams() {
