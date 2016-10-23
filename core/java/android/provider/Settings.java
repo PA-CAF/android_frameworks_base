@@ -3958,6 +3958,15 @@ public final class Settings {
          */
 
         /**
+         * Whether allowing pocket service to register sensors and dispatch informations.
+         *   0 = disabled
+         *   1 = enabled
+         * @author Carlo Savignano
+         * @hide
+         */
+        public static final String POCKET_JUDGE = "pocket_judge";
+
+        /**
          * Whether user can enable/disable navigation bar.
          * <p>
          * Type: int (0 for false, 1 for true)
