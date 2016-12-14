@@ -38,12 +38,10 @@
     <string name="config_srgb_path"></string>
 
     <!-- Extended Boosts for QPerformance -->
-
     <!-- Duration of the boost in seconds -->
+    <!-- Whether cpu boost is enabled right after boot -->
+    <bool name="config_enableCpuBoostOnBoot">false</bool>
     <integer name="onbootboost_duration">30</integer>
-
-    <!-- Boost parameters which get passed to QPerformance -->
-    <integer-array name="onbootboost_param_value"/>
 
     <!-- Boost parameters which get passed to QPerformance -->
     <integer-array name="qboost_strong_param_value"/>
@@ -174,5 +172,4 @@
 
     <!-- Whether to to intercept inputs on screen off. -->
     <bool name="config_enableKeyHandler">false</bool>
-
 </resources>
