@@ -216,6 +216,7 @@ public final class SystemServer {
 
     private boolean mOnlyCore;
     private boolean mFirstBoot;
+    private final boolean mRuntimeRestart;
 
     /**
      * Start the sensor service.
