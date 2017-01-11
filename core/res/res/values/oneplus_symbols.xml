@@ -30,6 +30,9 @@
   <!-- Hardware Keys Default Constants  -->
   <java-symbol type="integer" name="config_deviceHardwareKeys" />
 
+  <!-- Internal default to navigation bar value -->
+  <java-symbol type="bool" name="config_defaultToNavigationBar" />
+
   <!-- Gestures Settings -->
   <java-symbol type="integer" name="config_doubleTapKeyCode" />
   <java-symbol type="integer" name="config_drawVKeyCode" />
