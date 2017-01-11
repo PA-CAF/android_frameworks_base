@@ -234,6 +234,9 @@ public class TunerService extends SystemUI {
         mContext.sendBroadcast(intent);
 
         for (String key : mTunableLookup.keySet()) {
+            if (mExceptionsList.contains(key)) {
+                continue;
+            }
             setValue(key, null);
         }
     }
