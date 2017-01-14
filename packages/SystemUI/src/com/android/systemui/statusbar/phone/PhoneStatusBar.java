@@ -1525,6 +1525,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         } else {
             removeNavigationBar();
         }
+        mBurnInProtectionController.setNavigationBarView(enabled ? mNavigationBarView : null);
     }
 
     private void prepareNavigationBarView() {
