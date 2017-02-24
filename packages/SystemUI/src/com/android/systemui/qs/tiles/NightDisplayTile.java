@@ -56,8 +56,6 @@ public class NightDisplayTile extends QSTile<QSTile.BooleanState>
         super(host);
         mController = new NightDisplayController(mContext, ActivityManager.getCurrentUser());
         mDetailAdapter = new NightDisplayDetailAdapter();
-        mUsingHwc2 = mContext.getResources().getBoolean(
-                com.android.internal.R.bool.config_enableHWC2);
         mSetting = new SecureSetting(mContext, mHandler, SETTING_WARNING_HIDDEN) {
             @Override
             protected void handleValueChanged(int value, boolean observedChange) {
@@ -86,7 +84,7 @@ public class NightDisplayTile extends QSTile<QSTile.BooleanState>
         final boolean activated = !mState.value;
         MetricsLogger.action(mContext, getMetricsCategory(), activated);
         mController.setActivated(activated);
-        if (activated && mSetting.getValue() == WARNING_SHOW && !mUsingHwc2) {
+        if (activated && mSetting.getValue() == WARNING_SHOW) {
             showDetail(true);
         }
     }
