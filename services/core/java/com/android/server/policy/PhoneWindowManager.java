@@ -112,6 +112,7 @@ import android.service.notification.ZenModeConfig;
 import android.speech.RecognizerIntent;
 import android.telecom.TelecomManager;
 import android.service.gesture.EdgeGestureManager;
+import android.util.BoostFramework;
 import android.util.DisplayMetrics;
 import android.util.EventLog;
 import android.util.Log;
@@ -460,6 +461,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     Handler mHandler;
     WindowState mLastInputMethodWindow = null;
     WindowState mLastInputMethodTargetWindow = null;
+
+    private BoostFramework mPerf = null;
+    private boolean lIsPerfBoostEnabled;
+    private int[] mBoostParamValWeak;
+    private int[] mBoostParamValStrong;
 
     // FIXME This state is shared between the input reader and handler thread.
     // Technically it's broken and buggy but it has been like this for many years
@@ -1859,7 +1865,17 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mAppOpsManager = (AppOpsManager) mContext.getSystemService(Context.APP_OPS_SERVICE);
         mHasFeatureWatch = mContext.getPackageManager().hasSystemFeature(FEATURE_WATCH);
 
-        mHasAlertSlider = mContext.getResources().getBoolean(com.android.internal.R.bool.config_hasAlertSlider);
+
+        // Initialise Keypress Boost
+        lIsPerfBoostEnabled = context.getResources().getBoolean(
+                com.android.internal.R.bool.config_enableKeypressBoost);
+        mBoostParamValWeak = context.getResources().getIntArray(
+                com.android.internal.R.array.keypressboost_weak_param_value);
+        mBoostParamValStrong = context.getResources().getIntArray(
+                com.android.internal.R.array.keypressboost_strong_param_value);
+        if (lIsPerfBoostEnabled) {
+            mPerf = new BoostFramework();
+        }
 
         // Init display burn-in protection
         boolean burnInProtectionEnabled = context.getResources().getBoolean(
@@ -4554,6 +4570,39 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         return mSearchManager;
     }
 
+    private void dispatchKeypressBoost(int keyCode) {
+        int mBoostDuration = 0;
+        int[] mBoostParamVal = mBoostParamValWeak;
+
+        // Calculate the duration of the boost
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_UNKNOWN:
+                return;
+            case KeyEvent.KEYCODE_APP_SWITCH:
+            case KeyEvent.KEYCODE_BACK:
+            case KeyEvent.KEYCODE_ENTER:
+            case KeyEvent.KEYCODE_HOME:
+            case KeyEvent.KEYCODE_SOFT_LEFT:
+            case KeyEvent.KEYCODE_SOFT_RIGHT:
+                mBoostDuration = 300;
+                break;
+            case KeyEvent.KEYCODE_CAMERA:
+            case KeyEvent.KEYCODE_POWER:
+                mBoostDuration = 500;
+                mBoostParamVal = mBoostParamValStrong;
+                break;
+            case KeyEvent.KEYCODE_MEDIA_PLAY:
+                mBoostDuration = 650;
+                break;
+        }
+
+        // Dispatch the boost
+        if (mBoostDuration != 0) {
+            Slog.i(TAG, "Dispatching Keypress boost for " + mBoostDuration + " ms.");
+            mPerf.perfLockAcquire(mBoostDuration, mBoostParamVal);
+        }
+    }
+
     private void preloadRecentApps() {
         mPreloadedRecentApps = true;
         StatusBarManagerInternal statusbar = getStatusBarManagerInternal();
@@ -6564,74 +6613,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     + ", canApplyCustomPolicy = " + canApplyCustomPolicy(keyCode));
         }
 
-        // Apply custom policy for supported key codes.
-        if (canApplyCustomPolicy(keyCode) && !isCustomSource) {
-            if (mNavBarEnabled && !navBarKey /* TODO> && !isADBVirtualKeyOrAnyOtherKeyThatWeNeedToHandleAKAWhenMonkeyTestOrWHATEVER! */) {
-                if (DEBUG_INPUT) {
-                    Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: mNavBarEnabled, discard hw event.");
-                }
-                // Don't allow key events from hw keys when navbar is enabled.
-                return 0;
-            } else if (!interactive) {
-                if (DEBUG_INPUT) {
-                    Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: screen not interactive, discard hw event.");
-                }
-                // Ensure nav keys are handled on full interactive screen only.
-                return 0;
-            } else if (interactive) {
-                if (!down) {
-                    // Make sure we consume hw key events properly. Discard them
-                    // here if the event is already been consumed. This case can
-                    // happen when we send virtual key events and the virtual
-                    // ACTION_UP is sent before the hw ACTION_UP resulting in
-                    // handling twice an action up event.
-                    final boolean consumed = isKeyConsumed(keyCode);
-                    if (consumed) {
-                        if (DEBUG_INPUT) {
-                            Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: event already consumed, discard hw event.");
-                        }
-                        setKeyConsumed(keyCode, !consumed);
-                        return 0;
-                    }
-                } else {
-                    hapticFeedbackRequested = true;
-                }
-            }
-        }
-
-        // Apply custom policy for supported key codes.
-        if (canApplyCustomPolicy(keyCode) && !isCustomSource) {
-            if (mNavBarEnabled && !navBarKey /* TODO> && !isADBVirtualKeyOrAnyOtherKeyThatWeNeedToHandleAKAWhenMonkeyTestOrWHATEVER! */) {
-                if (DEBUG_INPUT) {
-                    Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: mNavBarEnabled, discard hw event.");
-                }
-                // Don't allow key events from hw keys when navbar is enabled.
-                return 0;
-            } else if (!interactive) {
-                if (DEBUG_INPUT) {
-                    Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: screen not interactive, discard hw event.");
-                }
-                // Ensure nav keys are handled on full interactive screen only.
-                return 0;
-            } else if (interactive) {
-                if (!down) {
-                    // Make sure we consume hw key events properly. Discard them
-                    // here if the event is already been consumed. This case can
-                    // happen when we send virtual key events and the virtual
-                    // ACTION_UP is sent before the hw ACTION_UP resulting in
-                    // handling twice an action up event.
-                    final boolean consumed = isKeyConsumed(keyCode);
-                    if (consumed) {
-                        if (DEBUG_INPUT) {
-                            Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: event already consumed, discard hw event.");
-                        }
-                        setKeyConsumed(keyCode, !consumed);
-                        return 0;
-                    }
-                } else {
-                    hapticFeedbackRequested = true;
-                }
-            }
+        // Intercept the Keypress event for Keypress boost
+        if (lIsPerfBoostEnabled) {
+            dispatchKeypressBoost(keyCode);
         }
 
         // Basic policy based on interactive state.
