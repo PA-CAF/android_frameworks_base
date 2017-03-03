@@ -113,6 +113,7 @@ import android.service.notification.ZenModeConfig;
 import android.speech.RecognizerIntent;
 import android.telecom.TelecomManager;
 import android.service.gesture.EdgeGestureManager;
+import android.util.BoostFramework;
 import android.util.DisplayMetrics;
 import android.util.EventLog;
 import android.util.Log;
@@ -465,16 +466,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     WindowState mLastInputMethodWindow = null;
     WindowState mLastInputMethodTargetWindow = null;
 
-    private BoostFramework mPerfKey = null;
-    private BoostFramework mPerfRotation = null;
+    private BoostFramework mPerf = null;
     private boolean lIsPerfBoostEnabled;
     private int[] mBoostParamValWeak;
     private int[] mBoostParamValStrong;
-    private boolean mKeypressBoostBlocked;
-    private long mBoostEventTime = 0L;
-    private int mLastBoostDuration = 0;
-    private final int ROTATION_BOOST_TIMEOUT = 5000 /*ms*/;
-    private final int ROTATION_BOOST_FADE = 300 /*ms*/;
 
     // FIXME This state is shared between the input reader and handler thread.
     // Technically it's broken and buggy but it has been like this for many years
@@ -1878,21 +1873,16 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         mAppOpsManager = (AppOpsManager) mContext.getSystemService(Context.APP_OPS_SERVICE);
         mHasFeatureWatch = mContext.getPackageManager().hasSystemFeature(FEATURE_WATCH);
 
-        mHasAlertSlider = mContext.getResources().getBoolean(R.bool.config_hasAlertSlider)
-                && !TextUtils.isEmpty(mContext.getResources().getString(R.string.alert_slider_state_path))
-                && !TextUtils.isEmpty(mContext.getResources().getString(R.string.alert_slider_uevent_match_path));
-
 
         // Initialise Keypress Boost
+        lIsPerfBoostEnabled = context.getResources().getBoolean(
+                com.android.internal.R.bool.config_enableKeypressBoost);
         mBoostParamValWeak = context.getResources().getIntArray(
-                com.android.internal.R.array.qboost_weak_param_value);
+                com.android.internal.R.array.keypressboost_weak_param_value);
         mBoostParamValStrong = context.getResources().getIntArray(
-                com.android.internal.R.array.qboost_strong_param_value);
-        lIsPerfBoostEnabled = mBoostParamValWeak.length != 0
-                && mBoostParamValStrong.length != 0;
+                com.android.internal.R.array.keypressboost_strong_param_value);
         if (lIsPerfBoostEnabled) {
-            mPerfKey = new BoostFramework();
-            mPerfRotation = new BoostFramework();
+            mPerf = new BoostFramework();
         }
 
         // Init display burn-in protection
@@ -4595,13 +4585,12 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     }
 
     private void dispatchKeypressBoost(int keyCode) {
-        int boostDuration = 0;
-        int[] boostParamVal = mBoostParamValWeak;
+        int mBoostDuration = 0;
+        int[] mBoostParamVal = mBoostParamValWeak;
 
         // Calculate the duration of the boost
         switch (keyCode) {
             case KeyEvent.KEYCODE_UNKNOWN:
-                mLastBoostDuration = 0;
                 return;
             case KeyEvent.KEYCODE_APP_SWITCH:
             case KeyEvent.KEYCODE_BACK:
@@ -4609,30 +4598,22 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             case KeyEvent.KEYCODE_HOME:
             case KeyEvent.KEYCODE_SOFT_LEFT:
             case KeyEvent.KEYCODE_SOFT_RIGHT:
-                boostDuration = 300;
+                mBoostDuration = 300;
                 break;
             case KeyEvent.KEYCODE_CAMERA:
             case KeyEvent.KEYCODE_POWER:
-                boostDuration = 500;
-                boostParamVal = mBoostParamValStrong;
+                mBoostDuration = 500;
+                mBoostParamVal = mBoostParamValStrong;
                 break;
             case KeyEvent.KEYCODE_MEDIA_PLAY:
-                boostDuration = 650;
+                mBoostDuration = 650;
                 break;
         }
 
         // Dispatch the boost
-        if (boostDuration != 0) {
-            mLastBoostDuration = boostDuration;
-            Slog.i(TAG, "Dispatching Keypress boost for " + boostDuration + " ms.");
-            mPerfKey.perfLockAcquire(boostDuration, boostParamVal);
-
-            // Block Keypress boost
-            mKeypressBoostBlocked = true;
-
-            // Calculate unblock time and dispatch delayed unblock MSG
-            int boostBlockTime = boostDuration + 50/*ms*/;
-            mHandler.sendEmptyMessageDelayed(MSG_DISPATCH_KEYPRESS_BOOST_UNBLOCK, boostBlockTime);
+        if (mBoostDuration != 0) {
+            Slog.i(TAG, "Dispatching Keypress boost for " + mBoostDuration + " ms.");
+            mPerf.perfLockAcquire(mBoostDuration, mBoostParamVal);
         }
     }
 
@@ -6686,69 +6667,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     + ", canApplyCustomPolicy = " + canApplyCustomPolicy(keyCode));
         }
 
-        /**
-         * Handle gestures input earlier then anything when screen is off.
-         * @author Carlo Savignano
-         */
-        if (!interactive) {
-            if (mKeyHandler != null && mKeyHandler.handleKeyEvent(event)) {
-                return 0;
-            }
-        }
-
-        // Apply custom policy for supported key codes.
-        if (canApplyCustomPolicy(keyCode) && !isCustomSource) {
-            if (mNavBarEnabled && !navBarKey /* TODO> && !isADBVirtualKeyOrAnyOtherKeyThatWeNeedToHandleAKAWhenMonkeyTestOrWHATEVER! */) {
-                if (DEBUG_INPUT) {
-                    Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: mNavBarEnabled, discard hw event.");
-                }
-                // Don't allow key events from hw keys when navbar is enabled.
-                return 0;
-            } else if (!interactive) {
-                if (DEBUG_INPUT) {
-                    Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: screen not interactive, discard hw event.");
-                }
-                // Ensure nav keys are handled on full interactive screen only.
-                return 0;
-            } else if (interactive) {
-                if (!down) {
-                    // Make sure we consume hw key events properly. Discard them
-                    // here if the event is already been consumed. This case can
-                    // happen when we send virtual key events and the virtual
-                    // ACTION_UP is sent before the hw ACTION_UP resulting in
-                    // handling twice an action up event.
-                    final boolean consumed = isKeyConsumed(keyCode);
-                    if (consumed) {
-                        if (DEBUG_INPUT) {
-                            Log.d(TAG, "interceptKeyBeforeQueueing(): key policy: event already consumed, discard hw event.");
-                        }
-                        setKeyConsumed(keyCode, !consumed);
-                        return 0;
-                    }
-                } else {
-                    hapticFeedbackRequested = true;
-                }
-            }
-        }
-
         // Intercept the Keypress event for Keypress boost
-        if (lIsPerfBoostEnabled && !isCustomSource) {
-            if (down && !longPress && repeatCount == 0 || down && longPress && repeatCount == 1) {
-                final long boostEventTime = mBoostEventTime;
-                mBoostEventTime = SystemClock.uptimeMillis();
-                if (boostEventTime != 0L) { // we had a previous boost
-                    final long boostEventTimeDiff = mBoostEventTime - boostEventTime;
-                    final boolean reBoostByDiff = boostEventTimeDiff >= ((long) mLastBoostDuration - 150L)
-                            && boostEventTimeDiff <= ((long) mLastBoostDuration - 50L);
-                    if (mKeypressBoostBlocked && mLastBoostDuration != 0 && reBoostByDiff) {
-                        // We have a few milliseconds remaining from our previous boost, release current boost before triggering next one.
-                        mHandler.removeMessages(MSG_DISPATCH_KEYPRESS_BOOST_UNBLOCK);
-                        mPerfKey.perfLockRelease();
-                        mKeypressBoostBlocked = false;
-                    }
-                }
-                dispatchKeypressBoost(keyCode);
-            }
+        if (lIsPerfBoostEnabled) {
+            dispatchKeypressBoost(keyCode);
         }
 
         // Basic policy based on interactive state.
