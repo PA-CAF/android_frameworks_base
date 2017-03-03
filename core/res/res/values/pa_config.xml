@@ -53,6 +53,13 @@
     <!-- Indicates whether device uses HWC 2.0 or higher -->
     <bool name="config_enableHWC2">false</bool>
 
+  <!-- Whether Keypress Boost is enabled -->
+  <bool name="config_enableKeypressBoost">false</bool>
+
+  <!-- Boost parameters which get passed to QPerformance -->
+  <integer-array name="keypressboost_strong_param_value"/>
+  <integer-array name="keypressboost_weak_param_value"/>
+
     <!-- Hardware 'face' keys present on the device, stored as a bit field.
          This integer should equal the sum of the corresponding value for each
          of the following keys present:

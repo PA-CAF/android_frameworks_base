@@ -36,12 +36,13 @@
   <java-symbol type="integer" name="onbootboost_duration" />
   <java-symbol type="array" name="onbootboost_param_value" />
 
-  <!-- Common boost params -->
-  <java-symbol type="array" name="qboost_strong_param_value" />
-  <java-symbol type="array" name="qboost_weak_param_value" />
-
   <!-- FP unlock Boost -->
   <java-symbol type="integer" name="fpunlockboost_duration" />
+
+  <!-- Keypress Boost -->
+  <java-symbol type="bool" name="config_enableKeypressBoost" />
+  <java-symbol type="array" name="keypressboost_strong_param_value" />
+  <java-symbol type="array" name="keypressboost_weak_param_value" />
 
   <!-- sRGB mode -->
   <java-symbol type="string" name="config_srgb_path" />
