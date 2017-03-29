@@ -2268,6 +2268,12 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             mKeyDoubleTapBehaviorDefaultResId.put(keyCode, getKeyDoubleTapBehaviorResId(keyCode));
             mKeyLongPressBehaviorDefaultResId.put(keyCode, getKeyLongPressBehaviorResId(keyCode));
         }
+
+        boolean enableKeyHandler = context.getResources().
+                getBoolean(com.android.internal.R.bool.config_enableKeyHandler);
+        if (enableKeyHandler) {
+            mKeyHandler = new KeyHandler(mContext);
+        }
     }
 
     /**
@@ -6812,6 +6818,16 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     + ", virtualKey = " + virtualKey + ", virtualHardKey = " + virtualHardKey
                     + ", navBarKey = " + navBarKey + ", fromSystem = " + fromSystem
                     + ", canApplyCustomPolicy = " + canApplyCustomPolicy(keyCode));
+        }
+
+        /**
+         * Handle gestures input earlier then anything when screen is off.
+         * @author Carlo Savignano
+         */
+        if (!interactive) {
+            if (mKeyHandler != null && mKeyHandler.handleKeyEvent(event)) {
+                return 0;
+            }
         }
 
         // Apply custom policy for supported key codes.
