@@ -3798,6 +3798,90 @@ public final class Settings {
         public static final String SCREENSHOT_SHUTTER_SOUND = "screenshot_shutter_sound";
 
         /**
+         * Controls whether gestures are enabled.
+         * @hide
+         */
+        public static final String GESTURES_ENABLED = "gestures_enabled";
+
+        /**
+         * Controls whether double tap to wake is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DOUBLE_TAP = "gesture_double_tap";
+
+        /**
+         * Controls whether draw V gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_V = "gesture_draw_v";
+
+        /**
+         * Controls whether draw inverse V gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_INVERSE_V = "gesture_draw_inverse_v";
+
+        /**
+         * Controls whether draw O gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_O = "gesture_draw_o";
+
+        /**
+         * Controls whether draw M gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_M = "gesture_draw_m";
+
+        /**
+         * Controls whether draw W gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_W = "gesture_draw_w";
+
+        /**
+         * Controls whether draw arrow left gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_ARROW_LEFT = "gesture_draw_arrow_left";
+
+        /**
+         * Controls whether draw arrow right gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_ARROW_RIGHT = "gesture_draw_arrow_right";
+
+        /**
+         * Controls whether one finger swipe up gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_ONE_FINGER_SWIPE_UP = "gesture_one_finger_swipe_up";
+
+        /**
+         * Controls whether one finger swipe right gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_ONE_FINGER_SWIPE_RIGHT = "gesture_one_finger_swipe_right";
+
+        /**
+         * Controls whether one finger swipe down gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_ONE_FINGER_SWIPE_DOWN = "gesture_one_finger_swipe_down";
+
+        /**
+         * Controls whether one finger swipe left gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_ONE_FINGER_SWIPE_LEFT = "gesture_one_finger_swipe_left";
+
+        /**
+         * Controls whether two finger swipe gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_TWO_FINGER_SWIPE = "gesture_two_finger_swipe";
+
+        /**
          * Settings to backup. This is here so that it's in the same place as the settings
          * keys and easy to update.
          *
@@ -3855,7 +3939,20 @@ public final class Settings {
             ACCELEROMETER_ROTATION,
             STATUS_BAR_BATTERY_STYLE,
             STATUS_BAR_SHOW_BATTERY_PERCENT,
-            SCREENSHOT_SHUTTER_SOUND
+            SCREENSHOT_SHUTTER_SOUND,
+            GESTURES_ENABLED,
+            GESTURE_DOUBLE_TAP,
+            GESTURE_DRAW_V,
+            GESTURE_DRAW_INVERSE_V,
+            GESTURE_DRAW_O,
+            GESTURE_DRAW_M,
+            GESTURE_DRAW_W,
+            GESTURE_DRAW_ARROW_LEFT,
+            GESTURE_DRAW_ARROW_RIGHT,
+            GESTURE_ONE_FINGER_SWIPE_UP,
+            GESTURE_ONE_FINGER_SWIPE_RIGHT,
+            GESTURE_ONE_FINGER_SWIPE_DOWN,
+            GESTURE_ONE_FINGER_SWIPE_LEFT
         };
 
         /**
@@ -6546,30 +6643,6 @@ public final class Settings {
         public static final String EXTENDED_REBOOT = "extended_reboot";
 
         /**
-         * Settings to reset on user request. They will fall back to their default value (0).
-         *
-         * @hide
-         */
-        public static final String[] SETTINGS_TO_RESET = {
-            QUICK_SETTINGS_QUICK_PULL_DOWN
-        };
-
-        /**
-         * Whether to include options in power menu for rebooting into recovery and bootloader
-         * @hide
-         */
-        public static final String EXTENDED_REBOOT = "extended_reboot";
-
-        /**
-         * Settings to reset on user request. They will fall back to their default value (0).
-         *
-         * @hide
-         */
-        public static final String[] SETTINGS_TO_RESET = {
-            QUICK_SETTINGS_QUICK_PULL_DOWN
-        };
-
-        /**
          * Whether or not the automatic storage manager is enabled and should run on the device.
          *
          * @hide
@@ -6642,28 +6715,6 @@ public final class Settings {
          * @hide
          */
         public static final String FORCE_AUTHORIZE_SUBSTRATUM_PACKAGES = "force_authorize_substratum_packages";
-
-        /**
-         * Used to store the last used system ui flags to make qs settings stick after reboot
-         * @hide
-         */
-        public static final String LAST_SYSTEM_DESIGN_FLAGS = "last_system_design_flags";
-
-        /**
-         * Setting to record how the look and feel of the system should be tweaked. This
-         * should be used in combination with magic.
-         *
-         * @see android.view.View#SYSTEM_DESIGN_FLAG_IMMERSIVE_NAV
-         * @see android.view.View#SYSTEM_DESIGN_FLAG_IMMERSIVE_STATUS
-         * @hide
-         */
-        public static final String SYSTEM_DESIGN_FLAGS = "system_design_flags";
-
-        /**
-         * Used to store sRGB state
-         * @hide
-         */
-        public static final String SRGB_ENABLED = "srgb_enabled";
 
         /**
          * Used to store the last used system ui flags to make qs settings stick after reboot
