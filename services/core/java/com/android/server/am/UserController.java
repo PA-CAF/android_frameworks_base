@@ -77,7 +77,6 @@ import android.os.UserManagerInternal;
 import android.os.storage.IMountService;
 import android.os.storage.StorageManager;
 import android.util.ArraySet;
-import android.util.BoostFramework;
 import android.util.IntArray;
 import android.util.Pair;
 import android.util.Slog;
@@ -413,37 +412,6 @@ final class UserController {
                             }, 0, null, null, null, AppOpsManager.OP_NONE,
                             null, true, false, MY_PID, SYSTEM_UID, userId);
                 }
-            }
-
-            /**
-             * For boosting right after boot
-             */
-            final int mBoostParamVal[] = mService.mContext.getResources().getIntArray(
-                    com.android.internal.R.array.onbootboost_param_value);
-            final boolean lIsPerfBoostEnabled = mBoostParamVal.length != 0;
-
-            if (lIsPerfBoostEnabled) {
-                int mBoostDuration = mService.mContext.getResources().getInteger(
-                        com.android.internal.R.integer.onbootboost_duration);
-
-                BoostFramework mPerf = new BoostFramework();
-
-                Slog.i(TAG, "Bootup boost was triggered for " + mBoostDuration + " seconds!");
-
-                if (mBoostDuration != 0)
-                    mBoostDuration = mBoostDuration * 1000; // Convert seconds to milliseconds
-
-                mPerf.perfLockAcquire(mBoostDuration, mBoostParamVal);
-            }
-
-            Slog.d(TAG, "Sending BOOT_COMPLETE user #" + userId);
-            // Do not report secondary users, runtime restarts or first boot/upgrade
-            if (userId == UserHandle.USER_SYSTEM
-                    && !mService.mSystemServiceManager.isRuntimeRestarted()
-                    && !isFirstBootOrUpgrade()) {
-                int uptimeSeconds = (int) (SystemClock.elapsedRealtime() / 1000);
-                MetricsLogger
-                        .histogram(mService.mContext, "framework_boot_completed", uptimeSeconds);
             }
 
             Slog.d(TAG, "Sending BOOT_COMPLETE user #" + userId);

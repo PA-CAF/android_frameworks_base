@@ -216,7 +216,6 @@ public final class SystemServer {
 
     private boolean mOnlyCore;
     private boolean mFirstBoot;
-    private final boolean mRuntimeRestart;
 
     /**
      * Start the sensor service.
@@ -697,6 +696,7 @@ public final class SystemServer {
         AssetAtlasService atlas = null;
         MediaRouterService mediaRouter = null;
         EdgeGestureService edgeGestureService = null;
+        GestureService gestureService = null;
 
         // Bring up services needed for UI.
         if (mFactoryTestMode != FactoryTest.FACTORY_TEST_LOW_LEVEL) {
@@ -1375,11 +1375,11 @@ public final class SystemServer {
         }
         Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
 
-        if (edgeGestureService != null) {
+        if (gestureService != null) {
             try {
-                edgeGestureService.systemReady();
+                gestureService.systemReady();
             } catch (Throwable e) {
-                reportWtf("making EdgeGesture service ready", e);
+                reportWtf("making Gesture Sensor Service ready", e);
             }
         }
 
