@@ -4686,7 +4686,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         if (boostDuration != 0) {
             mLastBoostDuration = boostDuration;
             Slog.i(TAG, "Dispatching Keypress boost for " + boostDuration + " ms.");
-            mPerf.perfLockAcquire(boostDuration, boostParamVal);
+            mPerfKey.perfLockAcquire(boostDuration, boostParamVal);
 
             // Block Keypress boost
             mKeypressBoostBlocked = true;
@@ -6817,7 +6817,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     if (mKeypressBoostBlocked && mLastBoostDuration != 0 && reBoostByDiff) {
                         // We have a few milliseconds remaining from our previous boost, release current boost before triggering next one.
                         mHandler.removeMessages(MSG_DISPATCH_KEYPRESS_BOOST_UNBLOCK);
-                        mPerf.perfLockRelease();
+                        mPerfKey.perfLockRelease();
                         mKeypressBoostBlocked = false;
                     }
                 }
