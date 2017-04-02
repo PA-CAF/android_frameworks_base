@@ -509,9 +509,8 @@ class GlobalScreenshot {
         mPreviewWidth = panelWidth;
         mPreviewHeight = r.getDimensionPixelSize(R.dimen.notification_max_height);
 
-        // Setup the Camera shutter sound
-        mCameraSound = new MediaActionSound();
-        mCameraSound.load(MediaActionSound.SHUTTER_CLICK);
+        mSettingsObserver.register();
+        updateCameraSound();
 
         // Load hardware rotation from prop
         mSfHwRotation = android.os.SystemProperties.getInt("ro.sf.hwrotation",0) / 90;
