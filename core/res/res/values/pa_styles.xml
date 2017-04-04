@@ -18,30 +18,10 @@
     <!-- ParanoidAndroid Theme Styles -->
     <eat-comment />
 
-    <style name="GlobalActionsSeparator">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">1dp</item>
-        <item name="android:background">@color/global_actions_separator</item>
-        <item name="android:clickable">false</item>
-        <item name="android:focusable">false</item>
-        <item name="android:focusableInTouchMode">false</item>
-    </style>
-
-    <style name="GlobalActionsSpacer">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">8dp</item>
-        <item name="android:background">@android:color/transparent</item>
-        <item name="android:clickable">false</item>
-        <item name="android:focusable">false</item>
-        <item name="android:focusableInTouchMode">false</item>
-    </style>
-
     <style name="GlobalActionsItemTextSmall" parent="@android:style/TextAppearance.Material.Small" >
-        <item name="textColor">?android:attr/textColorTertiary</item>
     </style>
 
     <style name="GlobalActionsItemTextLarge" parent="@android:style/TextAppearance.Material.Large" >
-        <item name="textColor">?android:attr/textColorPrimary</item>
     </style>
 
 </resources>
