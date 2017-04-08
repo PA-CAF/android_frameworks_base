@@ -64,7 +64,7 @@ import java.lang.reflect.Method;
 public final class ShutdownThread extends Thread {
     // constants
     private static final String TAG = "ShutdownThread";
-    private static final int PHONE_STATE_POLL_SLEEP_MSEC = 250;
+    private static final int PHONE_STATE_POLL_SLEEP_MSEC = 500;
     // maximum time we wait for the shutdown broadcast before going on.
     private static final int MAX_BROADCAST_TIME = 10*1000;
     private static final int MAX_SHUTDOWN_WAIT_TIME = 20*1000;
@@ -331,10 +331,7 @@ public final class ShutdownThread extends Thread {
         // Path 6: Regular shutdown
         //   Condition: Otherwise
         //   UI: spinning circle only (no progress bar)
-        if (mReboot) {
-            pd.setTitle(context.getText(com.android.internal.R.string.reboot));
-            pd.setMessage(context.getText(com.android.internal.R.string.reboot_progress));
-        } else if (PowerManager.REBOOT_RECOVERY_UPDATE.equals(mReason)) {
+        if (PowerManager.REBOOT_RECOVERY_UPDATE.equals(mReason)) {
             // We need the progress bar if uncrypt will be invoked during the
             // reboot, which might be time-consuming.
             mRebootHasProgressBar = RecoverySystem.UNCRYPT_PACKAGE_FILE.exists()
@@ -367,7 +364,11 @@ public final class ShutdownThread extends Thread {
             pd.setTitle(context.getText(com.android.internal.R.string.global_action_restart));
             pd.setMessage(context.getText(com.android.internal.R.string.reboot_progress));
             pd.setIndeterminate(true);
-        } else if (PowerManager.SHUTDOWN_USER_REQUESTED.equals(mReason)) {
+        } else if (PowerManager.REBOOT_BOOTLOADER.equals(mReason)) {
+            pd.setTitle(context.getText(com.android.internal.R.string.global_action_restart));
+            pd.setMessage(context.getText(com.android.internal.R.string.reboot_progress));
+            pd.setIndeterminate(true);
+        } else { // PowerManager.SHUTDOWN_USER_REQUESTED
             if (mReboot) {
                 pd.setTitle(context.getText(com.android.internal.R.string.global_action_restart));
                 pd.setMessage(context.getText(com.android.internal.R.string.reboot_progress));
@@ -621,7 +622,7 @@ public final class ShutdownThread extends Thread {
                             bluetooth.getState() == BluetoothAdapter.STATE_OFF;
                     if (!bluetoothOff) {
                         Log.w(TAG, "Disabling Bluetooth...");
-                        bluetooth.disable(false);  // disable but don't persist new state
+                        bluetooth.disable(mContext.getPackageName(), false);  // disable but don't persist new state
                     }
                 } catch (RemoteException ex) {
                     Log.e(TAG, "RemoteException during bluetooth shutdown", ex);
