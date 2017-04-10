@@ -38,11 +38,12 @@
     <string name="config_srgb_path"></string>
 
     <!-- Extended Boosts for QPerformance -->
+
     <!-- Duration of the boost in seconds -->
-    <!-- Whether cpu boost is enabled right after boot -->
-    <bool name="config_enableCpuBoostOnBoot">false</bool>
     <integer name="onbootboost_duration">30</integer>
-    <integer name="onbootboost_param_value">30</integer>
+
+    <!-- Boost parameters which get passed to QPerformance -->
+    <integer-array name="onbootboost_param_value"/>
 
     <!-- Boost parameters which get passed to QPerformance -->
     <integer-array name="qboost_strong_param_value"/>
@@ -53,13 +54,6 @@
 
     <!-- Indicates whether device uses HWC 2.0 or higher -->
     <bool name="config_enableHWC2">false</bool>
-
-  <!-- Whether Keypress Boost is enabled -->
-  <bool name="config_enableKeypressBoost">false</bool>
-
-  <!-- Boost parameters which get passed to QPerformance -->
-  <integer-array name="keypressboost_strong_param_value"/>
-  <integer-array name="keypressboost_weak_param_value"/>
 
     <!-- Hardware 'face' keys present on the device, stored as a bit field.
          This integer should equal the sum of the corresponding value for each
