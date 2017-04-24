@@ -121,10 +121,13 @@ public class BatteryMeterDrawable extends Drawable implements
     private int mCurrentBackgroundColor = 0;
     private int mCurrentFillColor = 0;
 
-    private int mLevelAlpha;
-    private int mCurrentLevel;
-    private int mStyle;
-    private ValueAnimator mAnimator;
+    private int mLevel = -1;
+    private boolean mPluggedIn;
+    private boolean mListening;
+    private static final int ADD_LEVEL = 10;
+    private static final int ANIM_DURATION = 500;
+    private int mAnimOffset;
+    private boolean mCharging;
 
     public BatteryMeterDrawable(Context context, Handler handler, int frameColor) {
         // Portrait is the default drawable style
@@ -317,8 +320,8 @@ public class BatteryMeterDrawable extends Drawable implements
     }
 
     private void updateShowPercent() {
-        mShowPercent = Settings.System.getInt(mContext.getContentResolver(),
-                Settings.System.STATUS_BAR_SHOW_BATTERY_PERCENT, 0) == 1;
+        mShowPercent = 0 != Settings.System.getInt(mContext.getContentResolver(),
+                SHOW_PERCENT_SETTING, 0);
     }
 
     private int getColorForLevel(int percent) {

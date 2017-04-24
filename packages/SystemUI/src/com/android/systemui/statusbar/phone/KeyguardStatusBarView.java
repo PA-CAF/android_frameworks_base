@@ -38,7 +38,6 @@ import com.android.systemui.statusbar.policy.BatteryController;
 import com.android.systemui.statusbar.policy.KeyguardUserSwitcher;
 import com.android.systemui.statusbar.policy.UserInfoController;
 import com.android.systemui.statusbar.policy.UserSwitcherController;
-import com.android.systemui.tuner.TunerService;
 
 import java.text.NumberFormat;
 
@@ -177,11 +176,10 @@ public class KeyguardStatusBarView extends RelativeLayout
                 mMultiUserSwitch.setVisibility(View.GONE);
             }
         }
-        if (mForceBatteryText != null) {
-            mBatteryLevel.setVisibility(mForceBatteryText ? View.VISIBLE : View.GONE);
-        } else {
-            mBatteryLevel.setVisibility(mShowBatteryText ? View.VISIBLE : View.GONE);
-        }
+
+        boolean showBatteryLevel = getResources().getBoolean(R.bool.config_showBatteryPercentage);
+        mBatteryLevel.setVisibility(
+                mBatteryCharging || showBatteryLevel ? View.VISIBLE : View.GONE);
     }
 
     private void updateSystemIconsLayoutParams() {
@@ -224,9 +222,7 @@ public class KeyguardStatusBarView extends RelativeLayout
 
     public void setBatteryController(BatteryController batteryController) {
         mBatteryController = batteryController;
-        final BatteryMeterView mBatteryMeter = (BatteryMeterView) findViewById(R.id.battery);
-        mBatteryMeter.setBatteryController(batteryController);
-        mBatteryMeter.setChargingAnimationsEnabled(true);
+        ((BatteryMeterView) findViewById(R.id.battery)).setBatteryController(batteryController);
     }
 
     public void setUserSwitcherController(UserSwitcherController controller) {
