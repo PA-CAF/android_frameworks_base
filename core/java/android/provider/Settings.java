@@ -3740,8 +3740,8 @@ public final class Settings {
          * 0: Alarms only.
          * Preferred silent mode for Alert Slider..
         **/
+        public static final String ALERT_SLIDER_SILENT_MODE = "alert_slider_silent_mode";
 
-        public static final String ALERT_SLIDER_ORDER = "alert_slider_order";
         
         /**
          * @hide
@@ -3749,15 +3749,14 @@ public final class Settings {
          * 0: Default
          * * Whether user can invert the order of the Alert Slider.
          * Whether user can swap the order of the Alert Slider.
-        */
-        
-        public static final String ALERT_SLIDER_SILENT_MODE = "alert_slider_silent_mode";
+        */        
+        public static final String ALERT_SLIDER_ORDER = "alert_slider_order";
+
          
         /**
          * Controls whether gestures are enabled.
          * @hide
         */
-
         public static final String GESTURES_ENABLED = "gestures_enabled";
 
         /**
