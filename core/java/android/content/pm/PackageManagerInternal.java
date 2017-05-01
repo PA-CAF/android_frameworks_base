@@ -175,14 +175,6 @@ public abstract class PackageManagerInternal {
      * @return A list of overlay packages. An empty list is returned if the
      *         user has no installed overlay packages.
      */
-    public abstract String getNameForUid(int uid);
-
-    /**
-     * Get all overlay packages for a user.
-     * @param userId The user for which to get the overlays.
-     * @return A list of overlay packages. An empty list is returned if the
-     *         user has no installed overlay packages.
-     */
     public abstract List<PackageInfo> getOverlayPackages(int userId);
 
     /**

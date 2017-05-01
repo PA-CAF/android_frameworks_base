@@ -2305,15 +2305,9 @@ public class PackageManagerService extends IPackageManager.Stub {
             // Collect vendor overlay packages.
             // (Do this before scanning any apps.)
             // For security and version matching reason, only consider
-            // overlay packages if they reside in the right directory.
-            String overlayThemeDir = SystemProperties.get(VENDOR_OVERLAY_THEME_PROPERTY);
-            if (!overlayThemeDir.isEmpty()) {
-                scanDirTracedLI(new File(VENDOR_OVERLAY_DIR, overlayThemeDir), mDefParseFlags
-                        | PackageParser.PARSE_IS_SYSTEM
-                        | PackageParser.PARSE_IS_SYSTEM_DIR,
-                        scanFlags, 0);
-            }
-            scanDirTracedLI(new File(VENDOR_OVERLAY_DIR), mDefParseFlags
+            // overlay packages if they reside in VENDOR_OVERLAY_DIR.
+            File vendorOverlayDir = new File(VENDOR_OVERLAY_DIR);
+            scanDirTracedLI(vendorOverlayDir, mDefParseFlags
                     | PackageParser.PARSE_IS_SYSTEM
                     | PackageParser.PARSE_IS_SYSTEM_DIR,
                     scanFlags, 0);
@@ -2354,28 +2348,6 @@ public class PackageManagerService extends IPackageManager.Stub {
             scanDirTracedLI(oemAppDir, mDefParseFlags
                     | PackageParser.PARSE_IS_SYSTEM
                     | PackageParser.PARSE_IS_SYSTEM_DIR, scanFlags, 0);
-
-            // Collect all Regionalization packages form Carrier's res packages.
-            if (RegionalizationEnvironment.isSupported()) {
-                Log.d(TAG, "Load Regionalization vendor apks");
-                final List<File> RegionalizationDirs =
-                        RegionalizationEnvironment.getAllPackageDirectories();
-                for (File f : RegionalizationDirs) {
-                    File RegionalizationSystemDir = new File(f, "system");
-                    // Collect packages in <Package>/system/priv-app
-                    scanDirLI(new File(RegionalizationSystemDir, "priv-app"),
-                            PackageParser.PARSE_IS_SYSTEM | PackageParser.PARSE_IS_SYSTEM_DIR
-                            | PackageParser.PARSE_IS_PRIVILEGED, scanFlags, 0);
-                    // Collect packages in <Package>/system/app
-                    scanDirLI(new File(RegionalizationSystemDir, "app"),
-                            PackageParser.PARSE_IS_SYSTEM | PackageParser.PARSE_IS_SYSTEM_DIR,
-                            scanFlags, 0);
-                    // Collect overlay in <Package>/system/vendor
-                    scanDirLI(new File(RegionalizationSystemDir, "vendor/overlay"),
-                            PackageParser.PARSE_IS_SYSTEM | PackageParser.PARSE_IS_SYSTEM_DIR,
-                            scanFlags, 0);
-                }
-            }
 
             // Prune any system packages that no longer exist.
             final List<String> possiblyDeletedUpdatedSystemApps = new ArrayList<String>();
@@ -21153,22 +21125,6 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
             synchronized (mPackages) {
                 return mSettings.wasPackageEverLaunchedLPr(packageName, userId);
             }
-        }
-
-        @Override
-        public List<PackageInfo> getOverlayPackages(int userId) {
-            final ArrayList<PackageInfo> overlayPackages = new ArrayList<PackageInfo>();
-            synchronized (mPackages) {
-                for (PackageParser.Package p : mPackages.values()) {
-                    if (p.mOverlayTarget != null) {
-                        PackageInfo pkg = generatePackageInfo((PackageSetting)p.mExtras, 0, userId);
-                        if (pkg != null) {
-                            overlayPackages.add(pkg);
-                        }
-                    }
-                }
-            }
-            return overlayPackages;
         }
 
         @Override

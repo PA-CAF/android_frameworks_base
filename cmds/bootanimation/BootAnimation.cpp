@@ -315,14 +315,8 @@ status_t BootAnimation::readyToRun() {
     else if (access(THEME_BOOTANIMATION_FILE, R_OK) == 0) {
         mZipFileName = THEME_BOOTANIMATION_FILE;
     }
-    else if (access(THEME_BOOTANIMATION_FILE, R_OK) == 0) {
-        mZipFileName = THEME_BOOTANIMATION_FILE;
-    }
     else if (access(OEM_BOOTANIMATION_FILE, R_OK) == 0) {
         mZipFileName = OEM_BOOTANIMATION_FILE;
-    }
-    else if (access(getAnimationFileName(IMG_SYS), R_OK) == 0) {
-        mZipFileName = getAnimationFileName(IMG_SYS);
     }
     else if (access(SYSTEM_BOOTANIMATION_FILE, R_OK) == 0) {
         mZipFileName = SYSTEM_BOOTANIMATION_FILE;

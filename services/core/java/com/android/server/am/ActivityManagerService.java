@@ -3232,27 +3232,6 @@ public final class ActivityManagerService extends ActivityManagerNative
                 mHandler.obtainMessage(IMMERSIVE_MODE_LOCK_MSG, (nextState) ? 1 : 0, 0, r));
     }
 
-    final void applyUpdateVrModeLocked(ActivityRecord r) {
-        mHandler.sendMessage(
-                mHandler.obtainMessage(VR_MODE_CHANGE_MSG, 0, 0, r));
-    }
-
-    private void applyVrModeIfNeededLocked(ActivityRecord r, boolean enable) {
-        mHandler.sendMessage(
-                mHandler.obtainMessage(VR_MODE_APPLY_IF_NEEDED_MSG, enable ? 1 : 0, 0, r));
-    }
-
-    private void applyVrMode(boolean enabled, ComponentName packageName, int userId,
-            ComponentName callingPackage, boolean immediate) {
-        VrManagerInternal vrService =
-                LocalServices.getService(VrManagerInternal.class);
-        if (immediate) {
-            vrService.setVrModeImmediate(enabled, packageName, userId, callingPackage);
-        } else {
-            vrService.setVrMode(enabled, packageName, userId, callingPackage);
-        }
-    }
-
     final void showAskCompatModeDialogLocked(ActivityRecord r) {
         Message msg = Message.obtain();
         msg.what = SHOW_COMPAT_MODE_DIALOG_UI_MSG;
