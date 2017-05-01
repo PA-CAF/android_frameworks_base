@@ -3216,6 +3216,12 @@ public final class Settings {
         public static final String ANIMATOR_DURATION_SCALE = Global.ANIMATOR_DURATION_SCALE;
 
         /**
+         * Use EdgeGesture Service for system gestures in PhoneWindowManager
+         * @hide
+         */
+        public static final String USE_EDGE_SERVICE_FOR_GESTURES = "edge_service_for_gestures";
+
+        /**
          * Control whether the accelerometer will be used to change screen
          * orientation.  If 0, it will not be used unless explicitly requested
          * by the application; if 1, it will be used by default unless explicitly
@@ -3619,115 +3625,38 @@ public final class Settings {
         public static final String BUTTON_BRIGHTNESS_ENABLED = "button_brightness_enabled";
 
         /**
+         * Whether or not volume button music controls should be enabled to seek media tracks
+         * @hide
+         */
+        public static final String VOLBTN_MUSIC_CONTROLS = "volbtn_music_controls";
+
+        /**
+         * Display style of the status bar battery information
+         * 0: Display the battery an icon in portrait mode
+         * 2: Display the battery as a circle
+         * 4: Hide the battery status information
+         * 6: Display the battery as plain text
+         * default: 0
+         * @hide
+         */
+        public static final String STATUS_BAR_BATTERY_STYLE = "status_bar_battery_style";
+
+        /**
+         * Status bar battery %
+         * 0: Hide the battery percentage
+         * 1: Display the battery percentage inside the icon
+         * 2: Display the battery percentage next to the icon
+         * @hide
+         */
+        public static final String STATUS_BAR_SHOW_BATTERY_PERCENT = "status_bar_show_battery_percent";
+
+        /**
          * Whether user can swap navigation lateral keys.
          * <p>
          * Type: int (0 for false, 1 for true)
          * @hide
          */
         public static final String SWAP_NAVIGATION_KEYS = "swap_navigation_keys";
-
-        /**
-         * @hide
-         * 1: Total silence
-         * 0: Alarms only.
-         * Preferred silent mode for Alert Slider..
-        **/
-        public static final String ALERT_SLIDER_SILENT_MODE = "alert_slider_silent_mode";
-
-        
-        /**
-         * @hide
-         * 1: Inverted
-         * 0: Default
-         * * Whether user can invert the order of the Alert Slider.
-         * Whether user can swap the order of the Alert Slider.
-        */        
-        public static final String ALERT_SLIDER_ORDER = "alert_slider_order";
-
-         
-        /**
-         * Controls whether gestures are enabled.
-         * @hide
-        */
-        public static final String GESTURES_ENABLED = "gestures_enabled";
-
-        /**
-         * Controls whether double tap to wake is enabled.
-         * @hide
-         */
-        public static final String GESTURE_DOUBLE_TAP = "gesture_double_tap";
-
-        /**
-         * Controls whether draw V gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_DRAW_V = "gesture_draw_v";
-
-        /**
-         * Controls whether draw inverse V gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_DRAW_INVERSE_V = "gesture_draw_inverse_v";
-
-        /**
-         * Controls whether draw O gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_DRAW_O = "gesture_draw_o";
-
-        /**
-         * Controls whether draw M gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_DRAW_M = "gesture_draw_m";
-
-        /**
-         * Controls whether draw W gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_DRAW_W = "gesture_draw_w";
-
-        /**
-         * Controls whether draw arrow left gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_DRAW_ARROW_LEFT = "gesture_draw_arrow_left";
-
-        /**
-         * Controls whether draw arrow right gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_DRAW_ARROW_RIGHT = "gesture_draw_arrow_right";
-
-        /**
-         * Controls whether one finger swipe up gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_ONE_FINGER_SWIPE_UP = "gesture_one_finger_swipe_up";
-
-        /**
-         * Controls whether one finger swipe right gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_ONE_FINGER_SWIPE_RIGHT = "gesture_one_finger_swipe_right";
-
-        /**
-         * Controls whether one finger swipe down gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_ONE_FINGER_SWIPE_DOWN = "gesture_one_finger_swipe_down";
-
-        /**
-         * Controls whether one finger swipe left gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_ONE_FINGER_SWIPE_LEFT = "gesture_one_finger_swipe_left";
-
-        /**
-         * Controls whether two finger swipe gesture is enabled.
-         * @hide
-         */
-        public static final String GESTURE_TWO_FINGER_SWIPE = "gesture_two_finger_swipe";
 
         /**
          * Action to perform when the home key is long-pressed.
@@ -3846,6 +3775,113 @@ public final class Settings {
         };
 
         /**
+         * Whether user can swap the order of the Alert Slider.
+         * * Whether user can invert the order of the Alert Slider.
+         * 0: Default
+         * 1: Inverted
+         * @hide
+         */
+        public static final String ALERT_SLIDER_ORDER = "alert_slider_order";
+
+        /**
+         * Preferred silent mode for Alert Slider..
+         * 0: Alarms only.
+         * 1: Total silence
+         * @hide
+         */
+        public static final String ALERT_SLIDER_SILENT_MODE = "alert_slider_silent_mode";
+
+        /**
+         * Controls whether the shutter sound is played when making a screenshot
+         * @hide
+         */
+        public static final String SCREENSHOT_SHUTTER_SOUND = "screenshot_shutter_sound";
+
+        /**
+         * Controls whether gestures are enabled.
+         * @hide
+         */
+        public static final String GESTURES_ENABLED = "gestures_enabled";
+
+        /**
+         * Controls whether double tap to wake is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DOUBLE_TAP = "gesture_double_tap";
+
+        /**
+         * Controls whether draw V gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_V = "gesture_draw_v";
+
+        /**
+         * Controls whether draw inverse V gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_INVERSE_V = "gesture_draw_inverse_v";
+
+        /**
+         * Controls whether draw O gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_O = "gesture_draw_o";
+
+        /**
+         * Controls whether draw M gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_M = "gesture_draw_m";
+
+        /**
+         * Controls whether draw W gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_W = "gesture_draw_w";
+
+        /**
+         * Controls whether draw arrow left gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_ARROW_LEFT = "gesture_draw_arrow_left";
+
+        /**
+         * Controls whether draw arrow right gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_DRAW_ARROW_RIGHT = "gesture_draw_arrow_right";
+
+        /**
+         * Controls whether one finger swipe up gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_ONE_FINGER_SWIPE_UP = "gesture_one_finger_swipe_up";
+
+        /**
+         * Controls whether one finger swipe right gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_ONE_FINGER_SWIPE_RIGHT = "gesture_one_finger_swipe_right";
+
+        /**
+         * Controls whether one finger swipe down gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_ONE_FINGER_SWIPE_DOWN = "gesture_one_finger_swipe_down";
+
+        /**
+         * Controls whether one finger swipe left gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_ONE_FINGER_SWIPE_LEFT = "gesture_one_finger_swipe_left";
+
+        /**
+         * Controls whether two finger swipe gesture is enabled.
+         * @hide
+         */
+        public static final String GESTURE_TWO_FINGER_SWIPE = "gesture_two_finger_swipe";
+
+        /**
          * Settings to backup. This is here so that it's in the same place as the settings
          * keys and easy to update.
          *
@@ -3901,6 +3937,9 @@ public final class Settings {
             LOCK_TO_APP_ENABLED,
             NOTIFICATION_SOUND,
             ACCELEROMETER_ROTATION,
+            STATUS_BAR_BATTERY_STYLE,
+            STATUS_BAR_SHOW_BATTERY_PERCENT,
+            SCREENSHOT_SHUTTER_SOUND,
             GESTURES_ENABLED,
             GESTURE_DOUBLE_TAP,
             GESTURE_DRAW_V,
@@ -6597,6 +6636,11 @@ public final class Settings {
          */
         public static final String QUICK_SETTINGS_QUICK_PULL_DOWN =
                 "quick_settings_quick_pull_down";
+        /**
+         * Whether to include options in power menu for rebooting into recovery and bootloader
+         * @hide
+         */
+        public static final String EXTENDED_REBOOT = "extended_reboot";
 
         /**
          * Settings to reset on user request. They will fall back to their default value (0).
@@ -6680,6 +6724,28 @@ public final class Settings {
          * @hide
          */
         public static final String FORCE_AUTHORIZE_SUBSTRATUM_PACKAGES = "force_authorize_substratum_packages";
+
+        /**
+         * Used to store the last used system ui flags to make qs settings stick after reboot
+         * @hide
+         */
+        public static final String LAST_SYSTEM_DESIGN_FLAGS = "last_system_design_flags";
+
+        /**
+         * Setting to record how the look and feel of the system should be tweaked. This
+         * should be used in combination with magic.
+         *
+         * @see android.view.View#SYSTEM_DESIGN_FLAG_IMMERSIVE_NAV
+         * @see android.view.View#SYSTEM_DESIGN_FLAG_IMMERSIVE_STATUS
+         * @hide
+         */
+        public static final String SYSTEM_DESIGN_FLAGS = "system_design_flags";
+
+        /**
+         * Used to store sRGB state
+         * @hide
+         */
+        public static final String SRGB_ENABLED = "srgb_enabled";
 
         /**
          * This are the settings to be backed up.

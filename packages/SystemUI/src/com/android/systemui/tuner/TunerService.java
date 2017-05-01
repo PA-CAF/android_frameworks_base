@@ -37,7 +37,6 @@ import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 
-import com.android.systemui.BatteryMeterDrawable;
 import com.android.systemui.DemoMode;
 import com.android.systemui.R;
 import com.android.systemui.SystemUI;
@@ -46,7 +45,9 @@ import com.android.systemui.settings.CurrentUserTracker;
 import com.android.systemui.statusbar.phone.StatusBarIconController;
 import com.android.systemui.statusbar.phone.SystemUIDialog;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 
@@ -67,6 +68,8 @@ public class TunerService extends SystemUI {
     private ContentResolver mContentResolver;
     private int mCurrentUser;
     private CurrentUserTracker mUserTracker;
+
+    private List mExceptionsList = new ArrayList<String>();
 
     @Override
     public void start() {
@@ -110,20 +113,55 @@ public class TunerService extends SystemUI {
         setValue(TUNER_VERSION, newVersion);
     }
 
+    private boolean isSystem(String key) {
+        return key.startsWith("system:");
+    }
+
+    private String chomp(String key) {
+        return key.replaceFirst("^(system):", "");
+    }
+
     public String getValue(String setting) {
+        if (isSystem(setting)) {
+            return Settings.System.getStringForUser(
+                    mContentResolver, chomp(setting), mCurrentUser);
+        }
         return Settings.Secure.getStringForUser(mContentResolver, setting, mCurrentUser);
     }
 
     public void setValue(String setting, String value) {
-         Settings.Secure.putStringForUser(mContentResolver, setting, value, mCurrentUser);
+        if (isSystem(setting)) {
+            Settings.System.putStringForUser(
+                    mContentResolver, chomp(setting), value, mCurrentUser);
+        } else {
+            Settings.Secure.putStringForUser(mContentResolver, setting, value, mCurrentUser);
+        }
     }
 
     public int getValue(String setting, int def) {
+        if (isSystem(setting)) {
+            return Settings.System.getIntForUser(
+                    mContentResolver, chomp(setting), def, mCurrentUser);
+        }
         return Settings.Secure.getIntForUser(mContentResolver, setting, def, mCurrentUser);
     }
 
     public void setValue(String setting, int value) {
-         Settings.Secure.putIntForUser(mContentResolver, setting, value, mCurrentUser);
+        if (isSystem(setting)) {
+            Settings.System.putIntForUser(
+                    mContentResolver, chomp(setting), value, mCurrentUser);
+        } else {
+            Settings.Secure.putIntForUser(mContentResolver, setting, value, mCurrentUser);
+        }
+    }
+
+    public void addTunable(Tunable tunable, boolean exception, String... keys) {
+        for (String key : keys) {
+            if (exception) {
+                mExceptionsList.add(key);
+            }
+            addTunable(tunable, key);
+        }
     }
 
     public void addTunable(Tunable tunable, String... keys) {
@@ -137,14 +175,18 @@ public class TunerService extends SystemUI {
             mTunableLookup.put(key, new ArraySet<Tunable>());
         }
         mTunableLookup.get(key).add(tunable);
-        Uri uri = Settings.Secure.getUriFor(key);
+        final Uri uri;
+        if (isSystem(key)) {
+            uri = Settings.System.getUriFor(chomp(key));
+        } else {
+            uri = Settings.Secure.getUriFor(key);
+        }
         if (!mListeningUris.containsKey(uri)) {
             mListeningUris.put(uri, key);
             mContentResolver.registerContentObserver(uri, false, mObserver, mCurrentUser);
         }
         // Send the first state.
-        String value = Settings.Secure.getStringForUser(mContentResolver, key, mCurrentUser);
-        tunable.onTuningChanged(key, value);
+        tunable.onTuningChanged(key, getValue(key));
     }
 
     public void removeTunable(Tunable tunable) {
@@ -169,7 +211,7 @@ public class TunerService extends SystemUI {
         if (tunables == null) {
             return;
         }
-        String value = Settings.Secure.getStringForUser(mContentResolver, key, mCurrentUser);
+        String value = getValue(key);
         for (Tunable tunable : tunables) {
             tunable.onTuningChanged(key, value);
         }
@@ -177,8 +219,7 @@ public class TunerService extends SystemUI {
 
     private void reloadAll() {
         for (String key : mTunableLookup.keySet()) {
-            String value = Settings.Secure.getStringForUser(mContentResolver, key,
-                    mCurrentUser);
+            String value = getValue(key);
             for (Tunable tunable : mTunableLookup.get(key)) {
                 tunable.onTuningChanged(key, value);
             }
@@ -188,13 +229,15 @@ public class TunerService extends SystemUI {
     public void clearAll() {
         // A couple special cases.
         Settings.Global.putString(mContentResolver, DemoMode.DEMO_MODE_ALLOWED, null);
-        Settings.System.putString(mContentResolver, BatteryMeterDrawable.SHOW_PERCENT_SETTING, null);
         Intent intent = new Intent(DemoMode.ACTION_DEMO);
         intent.putExtra(DemoMode.EXTRA_COMMAND, DemoMode.COMMAND_EXIT);
         mContext.sendBroadcast(intent);
 
         for (String key : mTunableLookup.keySet()) {
-            Settings.Secure.putString(mContentResolver, key, null);
+            if (mExceptionsList.contains(key)) {
+                continue;
+            }
+            setValue(key, null);
         }
     }
 

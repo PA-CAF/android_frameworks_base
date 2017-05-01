@@ -2103,10 +2103,12 @@
          "silent" = silent mode
          "users" = list of users
          "restart" = restart device
+         "screenshot" = screenshot
          -->
     <string-array translatable="false" name="config_globalActionsList">
         <item>power</item>
         <item>restart</item>
+        <item>screenshot</item>
         <item>bugreport</item>
         <item>users</item>
     </string-array>
@@ -2792,4 +2794,11 @@
     <!-- Whether to show emergency button in power menu -->
     <bool name="config_showEmergencyButtonInPowerMenu">false</bool>
 
+    <!-- The list of components which should be automatically disabled. -->
+    <string-array name="config_disabledComponents" translatable="false">
+    </string-array>
+
+    <!-- The list of components which should be forced to be enabled. -->
+    <string-array name="config_forceEnabledComponents" translatable="false">
+    </string-array>
 </resources>

@@ -87,6 +87,7 @@ import com.android.server.om.OverlayManagerService;
 import com.android.server.os.RegionalizationService;
 import com.android.server.os.SchedulingPolicyService;
 import com.android.server.pm.BackgroundDexOptService;
+import com.android.server.gesture.EdgeGestureService;
 import com.android.server.pm.Installer;
 import com.android.server.pm.LauncherAppsService;
 import com.android.server.pm.OtaDexoptService;
@@ -215,7 +216,6 @@ public final class SystemServer {
 
     private boolean mOnlyCore;
     private boolean mFirstBoot;
-    private boolean mIsAlarmBoot;
 
     /**
      * Start the sensor service.
@@ -455,19 +455,11 @@ public final class SystemServer {
 
         // Only run "core" apps if we're encrypting the device.
         String cryptState = SystemProperties.get("vold.decrypt");
-
-        mIsAlarmBoot = SystemProperties.getBoolean("ro.alarm_boot", false);
         if (ENCRYPTING_STATE.equals(cryptState)) {
             Slog.w(TAG, "Detected encryption in progress - only parsing core apps");
             mOnlyCore = true;
         } else if (ENCRYPTED_STATE.equals(cryptState)) {
             Slog.w(TAG, "Device encrypted - only parsing core apps");
-            mOnlyCore = true;
-        } else if (mIsAlarmBoot) {
-            // power off alarm mode is similar to encryption mode. Only power off alarm
-            // applications will be parsed by packageParser. Some services or settings are
-            // not necessary to power off alarm mode. So reuse mOnlyCore for power off alarm
-            // mode.
             mOnlyCore = true;
         }
 
@@ -704,6 +696,7 @@ public final class SystemServer {
         AssetAtlasService atlas = null;
         MediaRouterService mediaRouter = null;
         GestureService gestureService = null;
+        EdgeGestureService edgeGestureService = null;
 
         // Bring up services needed for UI.
         if (mFactoryTestMode != FactoryTest.FACTORY_TEST_LOW_LEVEL) {
@@ -989,7 +982,7 @@ public final class SystemServer {
             mSystemServiceManager.startService(DropBoxManagerService.class);
 
             if (!disableNonCoreServices && context.getResources().getBoolean(
-                        R.bool.config_enableWallpaperService) && !mIsAlarmBoot) {
+                        R.bool.config_enableWallpaperService)) {
                 traceBeginAndSlog("StartWallpaperManagerService");
                 mSystemServiceManager.startService(WALLPAPER_SERVICE_CLASS);
                 Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
@@ -1232,6 +1225,14 @@ public final class SystemServer {
             mSystemServiceManager.startService(ShortcutService.Lifecycle.class);
 
             mSystemServiceManager.startService(LauncherAppsService.class);
+
+            try {
+                Slog.i(TAG, "EdgeGesture service");
+                edgeGestureService = new EdgeGestureService(context, inputManager);
+                ServiceManager.addService("edgegestureservice", edgeGestureService);
+            } catch (Throwable e) {
+                Slog.e(TAG, "Failure starting EdgeGesture service", e);
+            }
         }
 
         if (!disableNonCoreServices && !disableMediaProjection) {
@@ -1379,6 +1380,14 @@ public final class SystemServer {
                 gestureService.systemReady();
             } catch (Throwable e) {
                 reportWtf("making Gesture Sensor Service ready", e);
+            }
+        }
+
+        if (edgeGestureService != null) {
+            try {
+                edgeGestureService.systemReady();
+            } catch (Throwable e) {
+                reportWtf("making EdgeGesture service ready", e);
             }
         }
 

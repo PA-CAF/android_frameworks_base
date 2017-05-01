@@ -76,6 +76,7 @@ import android.os.Trace;
 import android.os.UserHandle;
 import android.os.WorkSource;
 import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.DisplayMetrics;
 import android.util.EventLog;
@@ -153,6 +154,7 @@ import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -352,11 +354,6 @@ public class WindowManagerService extends IWindowManager.Stub
 
     private static final String PROPERTY_BUILD_DATE_UTC = "ro.build.date.utc";
 
-    /*define misc. activty trigger function*/
-    static final int START_PROCESS = 1;
-    static final int NETWORK_OPTS = 2;
-    static final int ANIMATION_SCALE = 3;
-
     // Enums for animation scale update types.
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({WINDOW_ANIMATION_SCALE, TRANSITION_ANIMATION_SCALE, ANIMATION_DURATION_SCALE})
@@ -366,6 +363,8 @@ public class WindowManagerService extends IWindowManager.Stub
     private static final int ANIMATION_DURATION_SCALE = 2;
 
     final private KeyguardDisableHandler mKeyguardDisableHandler;
+
+    private final int mSfHwRotation;
 
     final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -670,6 +669,9 @@ public class WindowManagerService extends IWindowManager.Stub
     // hits zero so we can apply deferred orientation updates.
     int mSeamlessRotationCount = 0;
 
+    private String mSrgbPath;
+    private boolean mSrgbSupported;
+
     private final class SettingsObserver extends ContentObserver {
         private final Uri mDisplayInversionEnabledUri =
                 Settings.Secure.getUriFor(Settings.Secure.ACCESSIBILITY_DISPLAY_INVERSION_ENABLED);
@@ -679,6 +681,8 @@ public class WindowManagerService extends IWindowManager.Stub
                 Settings.Global.getUriFor(Settings.Global.TRANSITION_ANIMATION_SCALE);
         private final Uri mAnimationDurationScaleUri =
                 Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE);
+        private final Uri mSrgbUri =
+                Settings.Secure.getUriFor(Settings.Secure.SRGB_ENABLED);
 
         public SettingsObserver() {
             super(new Handler());
@@ -691,6 +695,7 @@ public class WindowManagerService extends IWindowManager.Stub
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(mAnimationDurationScaleUri, false, this,
                     UserHandle.USER_ALL);
+            resolver.registerContentObserver(mSrgbUri, false, this, UserHandle.USER_CURRENT);
         }
 
         @Override
@@ -701,6 +706,8 @@ public class WindowManagerService extends IWindowManager.Stub
 
             if (mDisplayInversionEnabledUri.equals(uri)) {
                 updateCircularDisplayMaskIfNeeded();
+            } else if (mSrgbUri.equals(uri) && mSrgbSupported) {
+                writeState(mSrgbPath);
             } else {
                 @UpdateAnimationScaleMode
                 final int mode;
@@ -1050,6 +1057,12 @@ public class WindowManagerService extends IWindowManager.Stub
         filter.addAction(DevicePolicyManager.ACTION_DEVICE_POLICY_MANAGER_STATE_CHANGED);
         mContext.registerReceiver(mBroadcastReceiver, filter);
 
+        mSrgbPath = mContext.getString(com.android.internal.R.string.config_srgb_path);
+        mSrgbSupported = !TextUtils.isEmpty(mSrgbPath);
+        if (mSrgbSupported) {
+            writeState(mSrgbPath);
+        }
+
         mSettingsObserver = new SettingsObserver();
 
         mHoldingScreenWakeLock = mPowerManager.newWakeLock(
@@ -1074,6 +1087,9 @@ public class WindowManagerService extends IWindowManager.Stub
         } finally {
             SurfaceControl.closeTransaction();
         }
+
+        // Load hardware rotation from prop
+        mSfHwRotation = android.os.SystemProperties.getInt("ro.sf.hwrotation",0) / 90;
 
         showEmulatorDisplayOverlayIfNeeded();
     }
@@ -5744,7 +5760,7 @@ public class WindowManagerService extends IWindowManager.Stub
                         mActivityTrigger = new ActivityTrigger();
                     }
                     if (mActivityTrigger != null) {
-                        value = mActivityTrigger.activityMiscTrigger(ANIMATION_SCALE, mFocusingActivity, which, 0);
+                        value = mActivityTrigger.animationScalesCheck(mFocusingActivity, which);
                     }
                }
             }
@@ -6188,6 +6204,20 @@ public class WindowManagerService extends IWindowManager.Stub
     public void setInTouchMode(boolean mode) {
         synchronized(mWindowMap) {
             mInTouchMode = mode;
+        }
+    }
+
+    private void writeState(String path) {
+        final String value = Integer.toString(Settings.Secure.getInt(
+                mContext.getContentResolver(), Settings.Secure.SRGB_ENABLED, 0));
+        try {
+            final File file = new File(path);
+            final FileOutputStream fos = new FileOutputStream(file);
+            fos.write(value.getBytes());
+            fos.flush();
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -6639,6 +6669,8 @@ public class WindowManagerService extends IWindowManager.Stub
 
             // The screenshot API does not apply the current screen rotation.
             int rot = getDefaultDisplayContentLocked().getDisplay().getRotation();
+            // Allow for abnormal hardware orientation
+            rot = (rot + mSfHwRotation) % 4;
 
             if (rot == Surface.ROTATION_90 || rot == Surface.ROTATION_270) {
                 rot = (rot == Surface.ROTATION_90) ? Surface.ROTATION_270 : Surface.ROTATION_90;
