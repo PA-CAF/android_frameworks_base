@@ -923,10 +923,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 case MSG_DISPOSE_INPUT_CONSUMER:
                     disposeInputConsumer((InputConsumer) msg.obj);
                     break;
-                case MSG_BACK_DELAYED_PRESS:
-                    backMultiPressAction((Long) msg.obj, msg.arg1);
-                    finishBackKeyPress();
-                    break;
                 case MSG_DISPATCH_VOLKEY_WITH_WAKE_LOCK: {
                     KeyEvent event = (KeyEvent) msg.obj;
                     mVolBtnLongPress = true;
@@ -2518,10 +2514,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     Settings.Secure.INCALL_POWER_BUTTON_BEHAVIOR,
                     Settings.Secure.INCALL_POWER_BUTTON_BEHAVIOR_DEFAULT,
                     UserHandle.USER_CURRENT);
-            mIncallBackBehavior = Settings.Secure.getIntForUser(resolver,
-                    Settings.Secure.INCALL_BACK_BUTTON_BEHAVIOR,
-                    Settings.Secure.INCALL_BACK_BUTTON_BEHAVIOR_DEFAULT,
-                    UserHandle.USER_CURRENT);
             mVolBtnMusicControls = (Settings.System.getIntForUser(resolver,
                     Settings.System.VOLBTN_MUSIC_CONTROLS, 1, UserHandle.USER_CURRENT) == 1);
 
@@ -2533,18 +2525,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 mWakeGestureEnabledSetting = wakeGestureEnabledSetting;
                 updateWakeGestureListenerLp();
             }
-
-            final boolean defaultToNavigationBar = resources
-                    .getBoolean(com.android.internal.R.bool.config_defaultToNavigationBar);
-            final boolean navBarEnabled = Settings.System.getIntForUser(resolver,
-                    Settings.System.NAVIGATION_BAR_ENABLED, defaultToNavigationBar ? 1 : 0,
-                            UserHandle.USER_CURRENT) == 1;
-            if (navBarEnabled != mNavBarEnabled) {
-                mNavBarEnabled = navBarEnabled;
-                SystemProperties.set("qemu.hw.mainkeys", mNavBarEnabled ? "0" : "1");
-            }
-
-            readConfigurationDependentBehaviors();
 
             final boolean useEdgeService = Settings.System.getIntForUser(resolver,
                     Settings.System.USE_EDGE_SERVICE_FOR_GESTURES, 1, UserHandle.USER_CURRENT) == 1;

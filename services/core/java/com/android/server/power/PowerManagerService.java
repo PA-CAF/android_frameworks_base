@@ -675,7 +675,6 @@ public final class PowerManagerService extends SystemService
             mScreenBrightnessSettingMinimum = pm.getMinimumScreenBrightnessSetting();
             mScreenBrightnessSettingMaximum = pm.getMaximumScreenBrightnessSetting();
             mScreenBrightnessSettingDefault = pm.getDefaultScreenBrightnessSetting();
-            mScreenBrightnessForVrSettingDefault = pm.getDefaultScreenBrightnessForVrSetting();
             mButtonBrightnessSettingMinimum = pm.getMinimumButtonBrightnessSetting();
             mButtonBrightnessSettingMaximum = pm.getMaximumButtonBrightnessSetting();
             mButtonBrightnessSettingDefault = pm.getDefaultButtonBrightnessSetting();

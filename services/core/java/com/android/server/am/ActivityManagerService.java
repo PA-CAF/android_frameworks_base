@@ -574,6 +574,11 @@ public final class ActivityManagerService extends ActivityManagerNative
     private int lBoost_v2_TimeOut = 0;
     private int lBoost_v2_ParamVal[];
 
+    /*define misc. activty trigger function*/
+    static final int START_PROCESS = 1;
+    static final int NETWORK_OPTS = 2;
+    static final int ANIMATION_SCALE = 3;
+
     /** All system services */
     SystemServiceManager mSystemServiceManager;
 
@@ -1565,8 +1570,8 @@ public final class ActivityManagerService extends ActivityManagerNative
     static final int NOTIFY_PINNED_STACK_ANIMATION_ENDED_LISTENERS_MSG = 66;
     static final int NOTIFY_FORCED_RESIZABLE_MSG = 67;
     static final int NOTIFY_ACTIVITY_DISMISSING_DOCKED_STACK_MSG = 68;
-    static final int SHOW_UNSUPPORTED_DISPLAY_SIZE_DIALOG_MSG = 69;
-    static final int NOTIFY_VR_SLEEPING_MSG = 70;
+    static final int VR_MODE_APPLY_IF_NEEDED_MSG = 69;
+    static final int SHOW_UNSUPPORTED_DISPLAY_SIZE_DIALOG_MSG = 70;
 
     static final int FIRST_ACTIVITY_STACK_MSG = 100;
     static final int FIRST_BROADCAST_QUEUE_MSG = 200;
@@ -2391,6 +2396,14 @@ public final class ActivityManagerService extends ActivityManagerNative
                     }
                 }
                 vrService.setVrMode(vrMode, requestedPackage, userId, callingPackage);
+            } break;
+            case VR_MODE_APPLY_IF_NEEDED_MSG: {
+                final ActivityRecord r = (ActivityRecord) msg.obj;
+                final boolean needsVrMode = r != null && r.requestedVrComponent != null;
+                if (needsVrMode) {
+                    applyVrMode(msg.arg1 == 1, r.requestedVrComponent, r.userId,
+                            r.info.getComponentName(), false);
+                }
             } break;
             }
         }
@@ -3230,6 +3243,27 @@ public final class ActivityManagerService extends ActivityManagerNative
         final boolean nextState = r != null && r.immersive;
         mHandler.sendMessage(
                 mHandler.obtainMessage(IMMERSIVE_MODE_LOCK_MSG, (nextState) ? 1 : 0, 0, r));
+    }
+
+    final void applyUpdateVrModeLocked(ActivityRecord r) {
+        mHandler.sendMessage(
+                mHandler.obtainMessage(VR_MODE_CHANGE_MSG, 0, 0, r));
+    }
+
+    private void applyVrModeIfNeededLocked(ActivityRecord r, boolean enable) {
+        mHandler.sendMessage(
+                mHandler.obtainMessage(VR_MODE_APPLY_IF_NEEDED_MSG, enable ? 1 : 0, 0, r));
+    }
+
+    private void applyVrMode(boolean enabled, ComponentName packageName, int userId,
+            ComponentName callingPackage, boolean immediate) {
+        VrManagerInternal vrService =
+                LocalServices.getService(VrManagerInternal.class);
+        if (immediate) {
+            vrService.setVrModeImmediate(enabled, packageName, userId, callingPackage);
+        } else {
+            vrService.setVrMode(enabled, packageName, userId, callingPackage);
+        }
     }
 
     final void showAskCompatModeDialogLocked(ActivityRecord r) {
@@ -6287,8 +6321,6 @@ public final class ActivityManagerService extends ActivityManagerNative
                 ProcessList.INVALID_ADJ, callerWillRestart, true, doit, evenPersistent,
                 packageName == null ? ("stop user " + userId) : ("stop " + packageName));
 
-        didSomething |= mActivityStarter.clearPendingActivityLaunchesLocked(packageName);
-
         if (mStackSupervisor.finishDisabledPackageActivitiesLocked(
                 packageName, null, doit, evenPersistent, userId)) {
             if (!doit) {
@@ -6550,9 +6582,6 @@ public final class ActivityManagerService extends ActivityManagerNative
                 Slog.w(TAG, "Unattached app died before broadcast acknowledged, skipping");
                 skipPendingBroadcastLocked(pid);
             }
-            if (app.persistent && !app.isolated) {
-                addAppLocked(app.info, false, null /* ABI override */);
-            }
         } else {
             Slog.w(TAG, "Spurious process start timeout - pid not known for " + app);
         }
@@ -6624,8 +6653,6 @@ public final class ActivityManagerService extends ActivityManagerNative
         app.debugging = false;
         app.cached = false;
         app.killedByAm = false;
-        app.killed = false;
-
 
         // We carefully use the same state that PackageManager uses for
         // filtering, since we use this flag to decide if we need to install
@@ -10913,7 +10940,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                 // pending on the process even though we managed to update its
                 // adj level.  Not sure what to do about this, but at least
                 // the race is now smaller.
-                if (!success || cpr.proc.killedByAm) {
+                if (!success) {
                     // Uh oh...  it looks like the provider's process
                     // has been killed on us.  We need to wait for a new
                     // process to be started, and make sure its death
@@ -11701,7 +11728,6 @@ public final class ActivityManagerService extends ActivityManagerNative
                 && userId == UserHandle.USER_SYSTEM
                 && (info.flags & PERSISTENT_MASK) == PERSISTENT_MASK) {
             r.persistent = true;
-            r.maxAdj = ProcessList.PERSISTENT_PROC_ADJ;
         }
         addProcessNameLocked(r);
         return r;
@@ -17113,7 +17139,6 @@ public final class ActivityManagerService extends ActivityManagerNative
 
         app.crashing = false;
         app.notResponding = false;
-        app.renderThreadTid = 0;
 
         app.resetPackageList(mProcessStats);
         app.unlinkDeathRecipient();
@@ -17265,22 +17290,10 @@ public final class ActivityManagerService extends ActivityManagerNative
                 mPidsSelfLocked.remove(app.pid);
                 mHandler.removeMessages(PROC_START_TIMEOUT_MSG, app);
             }
-
-            final int infoUid = app.info.uid;
-            final int uid = app.uid;
-            final String processName = app.processName;
-            final boolean isolated = app.isolated;
-            // post BatteryStatsService.noteProcessFinish to handler thread
-            // as it does not need to acquire mPidsSelfLocked.
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    mBatteryStatsService.noteProcessFinish(processName, infoUid);
-                    if (isolated) {
-                        mBatteryStatsService.removeIsolatedUid(uid, infoUid);
-                    }
-                }
-            });
+            mBatteryStatsService.noteProcessFinish(app.processName, app.info.uid);
+            if (app.isolated) {
+                mBatteryStatsService.removeIsolatedUid(app.uid, app.info.uid);
+            }
             app.setPid(0);
         }
         return false;
