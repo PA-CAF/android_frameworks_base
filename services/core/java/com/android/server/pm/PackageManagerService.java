@@ -105,7 +105,6 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.ActivityManager;
 import android.app.ActivityManagerNative;
-import android.app.AlarmManager;
 import android.app.IActivityManager;
 import android.app.ResourcesManager;
 import android.app.admin.IDevicePolicyManager;
@@ -538,13 +537,11 @@ public class PackageManagerService extends IPackageManager.Stub {
     final Context mContext;
     final boolean mFactoryTest;
     final boolean mOnlyCore;
-    private boolean mOnlyPowerOffAlarm = false;
     final DisplayMetrics mMetrics;
     final int mDefParseFlags;
     final String[] mSeparateProcesses;
     final boolean mIsUpgrade;
     final boolean mIsPreNUpgrade;
-    final boolean mIsAlarmBoot;
     final boolean mIsPreNMR1Upgrade;
 
     @GuardedBy("mPackages")
@@ -970,6 +967,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                         filter.hasDataScheme(IntentFilter.SCHEME_HTTPS));
     }
 
+    ArrayList<ComponentName> mDisabledComponentsList;
     // Set of pending broadcasts for aggregating enable/disable of components.
     static class PendingPackageBroadcasts {
         // for each user id, a map of <package name -> components within that package>
@@ -1839,8 +1837,18 @@ public class PackageManagerService extends IPackageManager.Stub {
         @Override
         public void onVolumeStateChanged(VolumeInfo vol, int oldState, int newState) {
             if (vol.type == VolumeInfo.TYPE_PRIVATE) {
-                if (vol.state == VolumeInfo.STATE_MOUNTED) {
-                    final String volumeUuid = vol.getFsUuid();
+                final String volumeUuid = vol.getFsUuid();
+                boolean volCurStateMounted = false;
+                // To handle a case where the onVolumeStateChanged callback is called with
+                // volume state MOUNTED, but the current state of volume is changed to
+                // UNMOUNTED/EJECTED state due to asynchronous behaviour of vold.
+                if(volumeUuid != null) {
+                    StorageManager storage = mContext.getSystemService(StorageManager.class);
+                    VolumeInfo currentVol = storage.findVolumeByUuid(volumeUuid);
+                    if(currentVol != null && currentVol.state == VolumeInfo.STATE_MOUNTED)
+                        volCurStateMounted = true;
+                }
+                if (vol.state == VolumeInfo.STATE_MOUNTED && volCurStateMounted) {
 
                     // Clean up any users or apps that were removed or recreated
                     // while this volume was missing
@@ -2097,28 +2105,6 @@ public class PackageManagerService extends IPackageManager.Stub {
                 ApplicationInfo.FLAG_SYSTEM, ApplicationInfo.PRIVATE_FLAG_PRIVILEGED);
         mSettings.addSharedUserLPw("android.uid.shell", SHELL_UID,
                 ApplicationInfo.FLAG_SYSTEM, ApplicationInfo.PRIVATE_FLAG_PRIVILEGED);
-
-        File setFile = new File(AlarmManager.POWER_OFF_ALARM_SET_FILE);
-        File handleFile = new File(AlarmManager.POWER_OFF_ALARM_HANDLE_FILE);
-        mIsAlarmBoot = SystemProperties.getBoolean("ro.alarm_boot", false);
-        if (mIsAlarmBoot) {
-            mOnlyPowerOffAlarm = true;
-        } else if (setFile.exists() && handleFile.exists()) {
-            // if it is normal boot, check if power off alarm is handled. And set
-            // alarm properties for others to check.
-            if (!mOnlyCore && AlarmManager
-                    .readPowerOffAlarmFile(AlarmManager.POWER_OFF_ALARM_HANDLE_FILE)
-                    .equals(AlarmManager.POWER_OFF_ALARM_HANDLED)) {
-                SystemProperties.set("ro.alarm_handled", "true");
-                File instanceFile = new File(AlarmManager.POWER_OFF_ALARM_INSTANCE_FILE);
-                String instanceValue = AlarmManager
-                        .readPowerOffAlarmFile(AlarmManager.POWER_OFF_ALARM_INSTANCE_FILE);
-                SystemProperties.set("ro.alarm_instance", instanceValue);
-
-                AlarmManager.writePowerOffAlarmFile(AlarmManager.POWER_OFF_ALARM_HANDLE_FILE,
-                        AlarmManager.POWER_OFF_ALARM_NOT_HANDLED);
-            }
-        }
 
         String separateProcesses = SystemProperties.get("debug.separate_processes");
         if (separateProcesses != null && separateProcesses.length() > 0) {
@@ -2617,6 +2603,38 @@ public class PackageManagerService extends IPackageManager.Stub {
             reconcileAppsDataLI(StorageManager.UUID_PRIVATE_INTERNAL, UserHandle.USER_SYSTEM,
                     storageFlags);
 
+            // Disable components marked for disabling at build-time
+            mDisabledComponentsList = new ArrayList<ComponentName>();
+            for (String name : mContext.getResources().getStringArray(
+                    com.android.internal.R.array.config_disabledComponents)) {
+                ComponentName cn = ComponentName.unflattenFromString(name);
+                mDisabledComponentsList.add(cn);
+                Slog.v(TAG, "Disabling " + name);
+                String className = cn.getClassName();
+                PackageSetting pkgSetting = mSettings.mPackages.get(cn.getPackageName());
+                if (pkgSetting == null || pkgSetting.pkg == null
+                        || !pkgSetting.pkg.hasComponentClassName(className)) {
+                    Slog.w(TAG, "Unable to disable " + name);
+                    continue;
+                }
+                pkgSetting.disableComponentLPw(className, UserHandle.USER_OWNER);
+            }
+
+            // Enable components marked for forced-enable at build-time
+            for (String name : mContext.getResources().getStringArray(
+                    com.android.internal.R.array.config_forceEnabledComponents)) {
+                ComponentName cn = ComponentName.unflattenFromString(name);
+                Slog.v(TAG, "Enabling " + name);
+                String className = cn.getClassName();
+                PackageSetting pkgSetting = mSettings.mPackages.get(cn.getPackageName());
+                if (pkgSetting == null || pkgSetting.pkg == null
+                        || !pkgSetting.pkg.hasComponentClassName(className)) {
+                    Slog.w(TAG, "Unable to enable " + name);
+                    continue;
+                }
+                pkgSetting.enableComponentLPw(className, UserHandle.USER_OWNER);
+            }
+
             // If this is first boot after an OTA, and a normal boot, then
             // we need to clear code cache directories.
             // Note that we do *not* clear the application profiles. These remain valid
@@ -2701,11 +2719,7 @@ public class PackageManagerService extends IPackageManager.Stub {
             } else {
                 mRequiredVerifierPackage = null;
                 mOptionalVerifierPackage = null;
-                if (mOnlyPowerOffAlarm) {
-                    mRequiredInstallerPackage = getRequiredInstallerLPr();
-                } else {
-                    mRequiredInstallerPackage = null;
-                }
+                mRequiredInstallerPackage = null;
                 mRequiredUninstallerPackage = null;
                 mIntentFilterVerifierComponent = null;
                 mIntentFilterVerifier = null;
@@ -6825,10 +6839,9 @@ public class PackageManagerService extends IPackageManager.Stub {
     private PackageParser.Package scanPackageLI(File scanFile, int parseFlags, int scanFlags,
             long currentTime, UserHandle user) throws PackageManagerException {
         if (DEBUG_INSTALL) Slog.d(TAG, "Parsing: " + scanFile);
-        PackageParser pp = new PackageParser(mContext);
+        PackageParser pp = new PackageParser();
         pp.setSeparateProcesses(mSeparateProcesses);
         pp.setOnlyCoreApps(mOnlyCore);
-        pp.setOnlyPowerOffAlarmApps(mOnlyPowerOffAlarm);
         pp.setDisplayMetrics(mMetrics);
 
         Trace.traceBegin(TRACE_TAG_PACKAGE_MANAGER, "parsePackage");
@@ -17883,6 +17896,12 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
     public void setComponentEnabledSetting(ComponentName componentName,
             int newState, int flags, int userId) {
         if (!sUserManager.exists(userId)) return;
+        // Don't allow to enable components marked for disabling at build-time
+        if (mDisabledComponentsList.contains(componentName)) {
+            Slog.d(TAG, "Ignoring attempt to set enabled state of disabled component "
+                    + componentName.flattenToString());
+            return;
+        }
         setEnabledSetting(componentName.getPackageName(),
                 componentName.getClassName(), newState, flags, userId, null);
     }
@@ -17897,6 +17916,7 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
             throw new IllegalArgumentException("Invalid new component state: "
                     + newState);
         }
+
         PackageSetting pkgSetting;
         final int uid = Binder.getCallingUid();
         final int permission;
@@ -18172,34 +18192,32 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
         int[] grantPermissionsUserIds = EMPTY_INT_ARRAY;
 
         synchronized (mPackages) {
-            if (!mIsAlarmBoot) {
-                // Verify that all of the preferred activity components actually
-                // exist.  It is possible for applications to be updated and at
-                // that point remove a previously declared activity component that
-                // had been set as a preferred activity.  We try to clean this up
-                // the next time we encounter that preferred activity, but it is
-                // possible for the user flow to never be able to return to that
-                // situation so here we do a sanity check to make sure we haven't
-                // left any junk around.
-                ArrayList<PreferredActivity> removed = new ArrayList<PreferredActivity>();
-                for (int i=0; i<mSettings.mPreferredActivities.size(); i++) {
-                    PreferredIntentResolver pir = mSettings.mPreferredActivities.valueAt(i);
-                    removed.clear();
-                    for (PreferredActivity pa : pir.filterSet()) {
-                        if (mActivities.mActivities.get(pa.mPref.mComponent) == null) {
-                            removed.add(pa);
-                        }
+            // Verify that all of the preferred activity components actually
+            // exist.  It is possible for applications to be updated and at
+            // that point remove a previously declared activity component that
+            // had been set as a preferred activity.  We try to clean this up
+            // the next time we encounter that preferred activity, but it is
+            // possible for the user flow to never be able to return to that
+            // situation so here we do a sanity check to make sure we haven't
+            // left any junk around.
+            ArrayList<PreferredActivity> removed = new ArrayList<PreferredActivity>();
+            for (int i=0; i<mSettings.mPreferredActivities.size(); i++) {
+                PreferredIntentResolver pir = mSettings.mPreferredActivities.valueAt(i);
+                removed.clear();
+                for (PreferredActivity pa : pir.filterSet()) {
+                    if (mActivities.mActivities.get(pa.mPref.mComponent) == null) {
+                        removed.add(pa);
                     }
-                    if (removed.size() > 0) {
-                        for (int r=0; r<removed.size(); r++) {
-                            PreferredActivity pa = removed.get(r);
-                            Slog.w(TAG, "Removing dangling preferred activity: "
-                                    + pa.mPref.mComponent);
-                            pir.removeFilter(pa);
-                        }
-                        mSettings.writePackageRestrictionsLPr(
-                                mSettings.mPreferredActivities.keyAt(i));
+                }
+                if (removed.size() > 0) {
+                    for (int r=0; r<removed.size(); r++) {
+                        PreferredActivity pa = removed.get(r);
+                        Slog.w(TAG, "Removing dangling preferred activity: "
+                                + pa.mPref.mComponent);
+                        pir.removeFilter(pa);
                     }
+                    mSettings.writePackageRestrictionsLPr(
+                            mSettings.mPreferredActivities.keyAt(i));
                 }
             }
 

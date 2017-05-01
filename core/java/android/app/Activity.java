@@ -119,6 +119,7 @@ import com.android.internal.app.IVoiceInteractor;
 import com.android.internal.app.ToolbarActionBar;
 import com.android.internal.app.WindowDecorActionBar;
 import com.android.internal.policy.PhoneWindow;
+import com.android.internal.policy.DecorView;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -844,6 +845,15 @@ public class Activity extends ContextThemeWrapper
     private boolean mEatKeyUpEvent;
 
     private static native String getDlWarning();
+
+    /**
+     * Return the activity handler instance.
+     *
+     * @hide
+     */
+    public Handler getHandler() {
+        return mHandler;
+    }
 
     /** Return the intent that started this activity. */
     public Intent getIntent() {
@@ -3076,25 +3086,29 @@ public class Activity extends ContextThemeWrapper
         }
 
        Context context = getApplicationContext();
-       if (mPerf == null){
-           mPerf = new BoostFramework();
-       }
-       boolean override = mPerf.boostOverride(context, ev, getResources().getDisplayMetrics());
 
-       if (mDragBoostPossible == 1 && override != true) {
-            if (mPerf == null){
-                mPerf = new BoostFramework();
-            }
-            if(mPerfLockDuration == -1){
-                mPerfLockDuration = getResources().getInteger(
-                    com.android.internal.R.integer.ascrollboost_timeout);
-                mAsParamVal = getResources().getIntArray(
-                    com.android.internal.R.array.ascrollboost_param_value);
-            }
-            mPerf.perfLockAcquireTouch(ev,
-                getResources().getDisplayMetrics(),
-                mPerfLockDuration, mAsParamVal);
-        }
+       if (mDragBoostPossible == 1) {
+           final boolean override = context.getResources().getBoolean(
+                com.android.internal.R.bool.config_debugBoost);
+           if (mPerf == null) {
+               mPerf = new BoostFramework();
+           }
+           if (!override) {
+                if (mPerfLockDuration == -1) {
+                    mPerfLockDuration = getResources().getInteger(
+                        com.android.internal.R.integer.ascrollboost_timeout);
+                    mAsParamVal = getResources().getIntArray(
+                        com.android.internal.R.array.ascrollboost_param_value);
+                }
+                if (mPerfLockDuration != 0 && mAsParamVal.length != 0) {
+                    mPerf.perfLockAcquireTouch(ev,
+                         getResources().getDisplayMetrics(),
+                         mPerfLockDuration, mAsParamVal);
+                }
+           } else {
+                mPerf.enableDebugBoost(context, ev, getResources().getDisplayMetrics());
+           }
+       }
 
         if (ev.getAction() == MotionEvent.ACTION_DOWN) {
             onUserInteraction();
@@ -5171,6 +5185,7 @@ public class Activity extends ContextThemeWrapper
             ViewManager wm = getWindowManager();
             wm.addView(mDecor, getWindow().getAttributes());
             mWindowAdded = true;
+            DecorView.setAddedToWindow(mDecor);
         }
         mDecor.setVisibility(View.VISIBLE);
     }

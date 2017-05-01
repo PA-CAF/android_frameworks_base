@@ -75,8 +75,8 @@ LOCAL_SHARED_LIBRARIES += \
     libGLESv2 \
     libnetutils \
 
-ifeq ($(BOARD_USES_QC_TIME_SERVICES),true)
-LOCAL_CFLAGS += -DHAVE_QC_TIME_SERVICES=1
+ifeq ($(BOARD_USES_LEGACY_QC_TIME_SERVICES),true)
+LOCAL_CFLAGS += -DUSES_LEGACY_QC_TIME_SERVICES=1
 LOCAL_SHARED_LIBRARIES += libtime_genoff
 $(shell mkdir -p $(OUT)/obj/SHARED_LIBRARIES/libtime_genoff_intermediates/)
 $(shell touch $(OUT)/obj/SHARED_LIBRARIES/libtime_genoff_intermediates/export_includes)

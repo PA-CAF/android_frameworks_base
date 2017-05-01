@@ -58,7 +58,6 @@ public class BoostFramework {
     private static int mParamVal[];
     private static String mBoostActivityList[];
     private static long mStartTime;
-    private static final int mDebugBoost = getDebugBoostProperty();
 
 /** @hide */
     private Object mPerf = null;
@@ -121,34 +120,25 @@ public class BoostFramework {
 */
 
 /** @hide */
-    public int perfLockAcquire(int duration, int... list) {
-        int ret = -1;
-        try {
-            Object retVal = mAcquireFunc.invoke(mPerf, duration, list);
-            ret = (int)retVal;
-        } catch(Exception e) {
-            Log.e(TAG,"Exception " + e);
-        }
-        return ret;
+    public void perfLockAcquire(int duration, int... list) {
+        new Thread(() -> {
+            try {
+                mAcquireFunc.invoke(mPerf, duration, list);
+            } catch(Exception e) {
+                Log.e(TAG,"Exception " + e);
+            }
+        }).start();
     }
 
 /** @hide */
-    public int perfLockRelease() {
-        int ret = -1;
-        try {
-            Object retVal = mReleaseFunc.invoke(mPerf);
-            ret = (int)retVal;
-        } catch(Exception e) {
-            Log.e(TAG,"Exception " + e);
-        }
-        return ret;
-    }
-
-/** @hide Reads system property
-     * @return 1 if property is set
-     */
-    public static int getDebugBoostProperty() {
-       return SystemProperties.getInt("persist.debugboost.enable", 0);
+    public void perfLockRelease() {
+        new Thread(() -> {
+            try {
+                mReleaseFunc.invoke(mPerf);
+            } catch(Exception e) {
+                Log.e(TAG,"Exception " + e);
+            }
+        }).start();
     }
 
 /** @hide Acquires debug boost perflock
@@ -191,30 +181,16 @@ public class BoostFramework {
        }
     }
 
-/** @hide sets debug boost if property is set
-    */
-    public boolean boostOverride(Context context, MotionEvent ev, DisplayMetrics metrics) {
-       /* Enable debug boost if property is set and
-        * current actiivity is present in list
-        */
-       if (mDebugBoost == 1) {
-          enableDebugBoost(context, ev, metrics);
-          return true;
-       }
-       return false;
-    }
-
 /** @hide */
-    public int perfLockAcquireTouch(MotionEvent ev, DisplayMetrics metrics,
+    public void perfLockAcquireTouch(MotionEvent ev, DisplayMetrics metrics,
                                    int duration, int... list) {
-        int ret = -1;
-        try {
-            Object retVal = mAcquireTouchFunc.invoke(mPerf, ev, metrics, duration, list);
-            ret = (int)retVal;
-        } catch(Exception e) {
-            Log.e(TAG,"Exception " + e);
-        }
-        return ret;
+        new Thread(() -> {
+            try {
+                mAcquireTouchFunc.invoke(mPerf, ev, metrics, duration, list);
+            } catch(Exception e) {
+                Log.e(TAG,"Exception " + e);
+            }
+        }).start();
     }
 
 /** @hide */
