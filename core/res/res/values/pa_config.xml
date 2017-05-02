@@ -42,6 +42,7 @@
     <!-- Whether cpu boost is enabled right after boot -->
     <bool name="config_enableCpuBoostOnBoot">false</bool>
     <integer name="onbootboost_duration">30</integer>
+    <integer name="onbootboost_param_value">30</integer>
 
     <!-- Boost parameters which get passed to QPerformance -->
     <integer-array name="qboost_strong_param_value"/>
