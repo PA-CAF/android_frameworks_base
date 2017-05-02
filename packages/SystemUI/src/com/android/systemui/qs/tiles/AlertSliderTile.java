@@ -243,14 +243,6 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
 
             mPolicy = NotificationManager.from(mContext).getNotificationPolicy();
 
-            if (mReminders != null) {
-                mReminders.setChecked(isPriorityCategoryEnabled(Policy.PRIORITY_CATEGORY_REMINDERS));
-            }
-
-            if (mEvents != null) {
-                mEvents.setChecked(isPriorityCategoryEnabled(Policy.PRIORITY_CATEGORY_EVENTS));
-            }
-
             if (convertView == null) {
                 mButtons = (SegmentedButtons) details.findViewById(R.id.alert_slider_buttons);
                 mMessageText = (TextView) details.findViewById(R.id.alert_slider_introduction_message);
@@ -282,7 +274,6 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
                     }
                 });
                 mReminders = (Switch) details.findViewById(R.id.toggle_reminders);
-                mReminders.setChecked(isPriorityCategoryEnabled(Policy.PRIORITY_CATEGORY_REMINDERS));
                 mReminders.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                     @Override
                     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -304,7 +295,6 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
                     }
                 });
                 mEvents = (Switch) details.findViewById(R.id.toggle_events);
-                mEvents.setChecked(isPriorityCategoryEnabled(Policy.PRIORITY_CATEGORY_EVENTS));
                 mEvents.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                     @Override
                     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -323,6 +313,9 @@ public class AlertSliderTile extends QSTile<QSTile.State>  {
                         Settings.Global.ZEN_MODE_NO_INTERRUPTIONS);
                 mButtons.setCallback(mButtonsCallback);
             }
+
+            mReminders.setChecked(isPriorityCategoryEnabled(Policy.PRIORITY_CATEGORY_REMINDERS));
+            mEvents.setChecked(isPriorityCategoryEnabled(Policy.PRIORITY_CATEGORY_EVENTS));
 
             mButtons.setSelectedValue(state, false /* fromClick */);
             refresh(state);
