@@ -433,24 +433,6 @@ public class BatteryMeterDrawable extends Drawable implements
             throw new BatteryMeterDrawableException(res.getResourceName(resId) + " is an " +
                     "invalid drawable", e);
         }
-        if (level != null) {
-            // Check that the level drawable is an AnimatedVectorDrawable
-            if (!(level instanceof AnimatedVectorDrawable)) {
-                throw new BatteryMeterDrawableException("Expected a AnimatedVectorDrawable " +
-                        "but received a " + level.getClass().getSimpleName());
-            }
-            // Make sure we can stop-motion animate the level drawable
-            try {
-                StopMotionVectorDrawable smvd = new StopMotionVectorDrawable(level);
-                smvd.setCurrentFraction(0.5f);
-            } catch (Exception e) {
-                throw new BatteryMeterDrawableException("Unable to perform stop motion on " +
-                        "battery_fill drawable", e);
-            }
-        } else {
-            throw new BatteryMeterDrawableException("Missing battery_fill drawable");
-        }
-    }
 
         // Check that the drawable is a LayerDrawable
         if (!(batteryDrawable instanceof LayerDrawable)) {
@@ -593,7 +575,6 @@ public class BatteryMeterDrawable extends Drawable implements
         } else {
             bolt = ((BitmapDrawable) boltDrawable).getBitmap();
         }
-    }
 
         return bolt;
     }
@@ -663,15 +644,6 @@ public class BatteryMeterDrawable extends Drawable implements
     private class BatteryMeterDrawableException extends RuntimeException {
         public BatteryMeterDrawableException(String detailMessage) {
             super(detailMessage);
-        }
-        if ((gravity & Gravity.END) == Gravity.END) {
-            return isRtl ? Paint.Align.LEFT : Paint.Align.RIGHT;
-        }
-        if ((gravity & Gravity.LEFT) == Gravity.LEFT) return Paint.Align.LEFT;
-        if ((gravity & Gravity.RIGHT) == Gravity.RIGHT) return Paint.Align.RIGHT;
-
-        public BatteryMeterDrawableException(String detailMessage, Throwable throwable) {
-            super(detailMessage, throwable);
         }
 
         public BatteryMeterDrawableException(String detailMessage, Throwable throwable) {
