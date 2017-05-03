@@ -574,11 +574,6 @@ public final class ActivityManagerService extends ActivityManagerNative
     private int lBoost_v2_TimeOut = 0;
     private int lBoost_v2_ParamVal[];
 
-    /*define misc. activty trigger function*/
-    static final int START_PROCESS = 1;
-    static final int NETWORK_OPTS = 2;
-    static final int ANIMATION_SCALE = 3;
-
     /** All system services */
     SystemServiceManager mSystemServiceManager;
 
@@ -6321,6 +6316,8 @@ public final class ActivityManagerService extends ActivityManagerNative
                 ProcessList.INVALID_ADJ, callerWillRestart, true, doit, evenPersistent,
                 packageName == null ? ("stop user " + userId) : ("stop " + packageName));
 
+        didSomething |= mActivityStarter.clearPendingActivityLaunchesLocked(packageName);
+
         if (mStackSupervisor.finishDisabledPackageActivitiesLocked(
                 packageName, null, doit, evenPersistent, userId)) {
             if (!doit) {
@@ -6582,6 +6579,9 @@ public final class ActivityManagerService extends ActivityManagerNative
                 Slog.w(TAG, "Unattached app died before broadcast acknowledged, skipping");
                 skipPendingBroadcastLocked(pid);
             }
+            if (app.persistent && !app.isolated) {
+                addAppLocked(app.info, false, null /* ABI override */);
+            }
         } else {
             Slog.w(TAG, "Spurious process start timeout - pid not known for " + app);
         }
@@ -6653,6 +6653,8 @@ public final class ActivityManagerService extends ActivityManagerNative
         app.debugging = false;
         app.cached = false;
         app.killedByAm = false;
+        app.killed = false;
+
 
         // We carefully use the same state that PackageManager uses for
         // filtering, since we use this flag to decide if we need to install
@@ -10940,7 +10942,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                 // pending on the process even though we managed to update its
                 // adj level.  Not sure what to do about this, but at least
                 // the race is now smaller.
-                if (!success) {
+                if (!success || cpr.proc.killedByAm) {
                     // Uh oh...  it looks like the provider's process
                     // has been killed on us.  We need to wait for a new
                     // process to be started, and make sure its death
@@ -11728,6 +11730,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                 && userId == UserHandle.USER_SYSTEM
                 && (info.flags & PERSISTENT_MASK) == PERSISTENT_MASK) {
             r.persistent = true;
+            r.maxAdj = ProcessList.PERSISTENT_PROC_ADJ;
         }
         addProcessNameLocked(r);
         return r;
@@ -17139,6 +17142,7 @@ public final class ActivityManagerService extends ActivityManagerNative
 
         app.crashing = false;
         app.notResponding = false;
+        app.renderThreadTid = 0;
 
         app.resetPackageList(mProcessStats);
         app.unlinkDeathRecipient();
@@ -17290,10 +17294,22 @@ public final class ActivityManagerService extends ActivityManagerNative
                 mPidsSelfLocked.remove(app.pid);
                 mHandler.removeMessages(PROC_START_TIMEOUT_MSG, app);
             }
-            mBatteryStatsService.noteProcessFinish(app.processName, app.info.uid);
-            if (app.isolated) {
-                mBatteryStatsService.removeIsolatedUid(app.uid, app.info.uid);
-            }
+
+            final int infoUid = app.info.uid;
+            final int uid = app.uid;
+            final String processName = app.processName;
+            final boolean isolated = app.isolated;
+            // post BatteryStatsService.noteProcessFinish to handler thread
+            // as it does not need to acquire mPidsSelfLocked.
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    mBatteryStatsService.noteProcessFinish(processName, infoUid);
+                    if (isolated) {
+                        mBatteryStatsService.removeIsolatedUid(uid, infoUid);
+                    }
+                }
+            });
             app.setPid(0);
         }
         return false;

@@ -878,6 +878,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             if (DEBUG) Log.v(TAG, "hasNavigationBar=" + showNav);
             if (showNav) {
                 createNavigationBarView(context);
+
             }
         } catch (RemoteException ex) {
             // no window manager? good luck with that

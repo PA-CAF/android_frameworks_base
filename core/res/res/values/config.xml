@@ -2110,6 +2110,8 @@
         <item>restart</item>
         <item>screenshot</item>
         <item>bugreport</item>
+        <item>airplane</item>
+        <item>silent</item>
         <item>users</item>
     </string-array>
 
