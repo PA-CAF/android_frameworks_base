@@ -60,12 +60,6 @@ public class AvoidBadWifiTracker {
     private final SettingObserver mSettingObserver;
     private volatile boolean mAvoidBadWifi = true;
 
-    BroadcastReceiver mConfigUpdateReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            reevaluate();
-        }
-    };
-
     public AvoidBadWifiTracker(Context ctx, Handler handler) {
         this(ctx, handler, null);
     }
@@ -78,14 +72,13 @@ public class AvoidBadWifiTracker {
 
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
-        mContext.registerReceiverAsUser(mConfigUpdateReceiver,
-                          UserHandle.ALL, intentFilter, null, null);
+        mContext.registerReceiverAsUser(new BroadcastReceiver() {
+            public void onReceive(Context context, Intent intent) {
+                reevaluate();
+            }
+        }, UserHandle.ALL, intentFilter, null, null);
 
         update();
-    }
-
-    public void shutdown() {
-        mContext.unregisterReceiver(mConfigUpdateReceiver);
     }
 
     public boolean currentValue() {

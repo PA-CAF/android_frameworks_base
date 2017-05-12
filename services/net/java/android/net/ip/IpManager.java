@@ -502,7 +502,6 @@ public class IpManager extends StateMachine {
     // Shut down this IpManager instance altogether.
     public void shutdown() {
         stop();
-        mAvoidBadWifiTracker.shutdown();
         quit();
     }
 

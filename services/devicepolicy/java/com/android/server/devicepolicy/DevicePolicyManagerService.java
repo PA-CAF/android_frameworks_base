@@ -4686,7 +4686,7 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         }
     }
 
-    private void wipeDataNoLock(boolean wipeExtRequested, String reason) {
+    private void wipeDataLocked(boolean wipeExtRequested, String reason) {
         if (wipeExtRequested) {
             StorageManager sm = (StorageManager) mContext.getSystemService(
                     Context.STORAGE_SERVICE);
@@ -4706,14 +4706,13 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         }
         final int userHandle = mInjector.userHandleGetCallingUserId();
         enforceFullCrossUsersPermission(userHandle);
-
-        final String source;
         synchronized (this) {
             // This API can only be called by an active device admin,
             // so try to retrieve it to check that the caller is one.
             final ActiveAdmin admin = getActiveAdminForCallerLocked(null,
                     DeviceAdminInfo.USES_POLICY_WIPE_DATA);
-            source = admin.info.getComponent().flattenToShortString();
+
+            final String source = admin.info.getComponent().flattenToShortString();
 
             long ident = mInjector.binderClearCallingIdentity();
             try {
@@ -4728,44 +4727,39 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                         manager.wipe();
                     }
                 }
+                boolean wipeExtRequested = (flags & WIPE_EXTERNAL_STORAGE) != 0;
+                wipeDeviceOrUserLocked(wipeExtRequested, userHandle,
+                        "DevicePolicyManager.wipeData() from " + source);
             } finally {
                 mInjector.binderRestoreCallingIdentity(ident);
             }
         }
-        final boolean wipeExtRequested = (flags & WIPE_EXTERNAL_STORAGE) != 0;
-        wipeDeviceNoLock(wipeExtRequested, userHandle,
-                "DevicePolicyManager.wipeData() from " + source);
     }
 
-    private void wipeDeviceNoLock(boolean wipeExtRequested, final int userHandle, String reason) {
-        final long ident = mInjector.binderClearCallingIdentity();
-        try {
-            if (userHandle == UserHandle.USER_SYSTEM) {
-                wipeDataNoLock(wipeExtRequested, reason);
-            } else {
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            IActivityManager am = mInjector.getIActivityManager();
-                            if (am.getCurrentUser().id == userHandle) {
-                                am.switchUser(UserHandle.USER_SYSTEM);
-                            }
-
-                            boolean isManagedProfile = isManagedProfile(userHandle);
-                            if (!mUserManager.removeUser(userHandle)) {
-                                Slog.w(LOG_TAG, "Couldn't remove user " + userHandle);
-                            } else if (isManagedProfile) {
-                                sendWipeProfileNotification();
-                            }
-                        } catch (RemoteException re) {
-                            // Shouldn't happen
+    private void wipeDeviceOrUserLocked(boolean wipeExtRequested, final int userHandle, String reason) {
+        if (userHandle == UserHandle.USER_SYSTEM) {
+            wipeDataLocked(wipeExtRequested, reason);
+        } else {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        IActivityManager am = mInjector.getIActivityManager();
+                        if (am.getCurrentUser().id == userHandle) {
+                            am.switchUser(UserHandle.USER_SYSTEM);
                         }
+
+                        boolean isManagedProfile = isManagedProfile(userHandle);
+                        if (!mUserManager.removeUser(userHandle)) {
+                            Slog.w(LOG_TAG, "Couldn't remove user " + userHandle);
+                        } else if (isManagedProfile) {
+                            sendWipeProfileNotification();
+                        }
+                    } catch (RemoteException re) {
+                        // Shouldn't happen
                     }
-                });
-            }
-        } finally {
-            mInjector.binderRestoreCallingIdentity(ident);
+                }
+            });
         }
     }
 
@@ -4919,7 +4913,7 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
             }
             if (wipeData) {
                 // Call without holding lock.
-                wipeDeviceNoLock(false, identifier,
+                wipeDeviceOrUserLocked(false, identifier,
                         "reportFailedPasswordAttempt()");
             }
         } finally {
