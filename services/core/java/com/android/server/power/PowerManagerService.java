@@ -797,6 +797,51 @@ public final class PowerManagerService extends SystemService
                     Secure.BRIGHTNESS_USE_TWILIGHT),
                     false, mSettingsObserver, UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_DOUBLE_TAP),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_DRAW_V),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_DRAW_INVERSE_V),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_DRAW_O),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_DRAW_M),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_DRAW_W),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_DRAW_ARROW_LEFT),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_DRAW_ARROW_RIGHT),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                            Settings.System.GESTURE_ONE_FINGER_SWIPE_UP),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                            Settings.System.GESTURE_ONE_FINGER_SWIPE_RIGHT),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                            Settings.System.GESTURE_ONE_FINGER_SWIPE_UP),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                            Settings.System.GESTURE_ONE_FINGER_SWIPE_RIGHT),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_ONE_FINGER_SWIPE_DOWN),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_ONE_FINGER_SWIPE_LEFT),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.GESTURE_TWO_FINGER_SWIPE),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.BUTTON_BRIGHTNESS),
                     false, mSettingsObserver, UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
