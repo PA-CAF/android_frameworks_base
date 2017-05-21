@@ -1134,12 +1134,130 @@ public final class PowerManagerService extends SystemService
             }
         }
 
-        final int oldScreenBrightnessSetting = mScreenBrightnessSetting;
-        mScreenBrightnessSetting = Settings.System.getIntForUser(resolver,
-                Settings.System.SCREEN_BRIGHTNESS, mScreenBrightnessSettingDefault,
-                UserHandle.USER_CURRENT);
-        if (oldScreenBrightnessSetting != mScreenBrightnessSetting) {
-            mTemporaryScreenBrightnessSettingOverride = -1;
+        if (mSupportsDrawInverseVConfig) {
+            boolean drawInverseVEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_DRAW_INVERSE_V, mContext.getResources()
+                    .getInteger(com.android.internal.R.integer.config_drawInverseVDefault),
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
+            if (drawInverseVEnabled != mDrawInverseVEnabled) {
+                mDrawInverseVEnabled = drawInverseVEnabled;
+                nativeSetFeature(POWER_FEATURE_DRAW_INVERSE_V, mDrawInverseVEnabled ? 1 : 0);
+            }
+        }
+
+        if (mSupportsDrawOConfig) {
+            boolean drawOEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_DRAW_O, mContext.getResources()
+                    .getInteger(com.android.internal.R.integer.config_drawODefault),
+                    UserHandle.USER_CURRENT) > 0;
+            if (drawOEnabled != mDrawOEnabled) {
+                mDrawOEnabled = drawOEnabled;
+                nativeSetFeature(POWER_FEATURE_DRAW_O,
+                        mDrawOEnabled && mGesturesEnabled? 1 : 0);
+            }
+        }
+
+        if (mSupportsDrawMConfig) {
+            boolean drawMEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_DRAW_M, mContext.getResources()
+                    .getInteger(com.android.internal.R.integer.config_drawMDefault),
+                    UserHandle.USER_CURRENT) > 0;
+            if (drawMEnabled != mDrawMEnabled) {
+                mDrawMEnabled = drawMEnabled;
+                nativeSetFeature(POWER_FEATURE_DRAW_M,
+                        mDrawMEnabled && mGesturesEnabled ? 1 : 0);
+            }
+        }
+
+        if (mSupportsDrawWConfig) {
+            boolean drawWEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_DRAW_W, mContext.getResources()
+                    .getInteger(com.android.internal.R.integer.config_drawWDefault),
+                    UserHandle.USER_CURRENT) > 0;
+            if (drawWEnabled != mDrawWEnabled) {
+                mDrawWEnabled = drawWEnabled;
+                nativeSetFeature(POWER_FEATURE_DRAW_W,
+                        mDrawWEnabled && mGesturesEnabled ? 1 : 0);
+            }
+        }
+
+        if (mSupportsDrawArrowLeftConfig) {
+            boolean drawArrowLeftEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_DRAW_ARROW_LEFT, mContext.getResources()
+                    .getInteger(com.android.internal.R.integer.config_drawArrowLeftDefault),
+                    UserHandle.USER_CURRENT) > 0;
+            if (drawArrowLeftEnabled != mDrawArrowLeftEnabled) {
+                mDrawArrowLeftEnabled = drawArrowLeftEnabled;
+                nativeSetFeature(POWER_FEATURE_DRAW_ARROW_LEFT,
+                        mDrawArrowLeftEnabled && mGesturesEnabled ? 1 : 0);
+            }
+        }
+
+        if (mSupportsDrawArrowRightConfig) {
+            boolean drawArrowRightEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_DRAW_ARROW_RIGHT, mContext.getResources()
+                    .getInteger(com.android.internal.R.integer.config_drawArrowRightDefault),
+                    UserHandle.USER_CURRENT) > 0;
+            if (drawArrowRightEnabled != mDrawArrowRightEnabled) {
+                mDrawArrowRightEnabled = drawArrowRightEnabled;
+                nativeSetFeature(POWER_FEATURE_DRAW_ARROW_RIGHT,
+                        mDrawArrowRightEnabled && mGesturesEnabled ? 1 : 0);
+            }
+        }
+
+        if (mSupportsOneFingerSwipeUpConfig) {
+            boolean oneFingerSwipeUpEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_ONE_FINGER_SWIPE_UP, mContext.getResources()
+                            .getInteger(com.android.internal.R.integer.config_oneFingerSwipeUpDefault),
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
+            if (oneFingerSwipeUpEnabled != mOneFingerSwipeUpEnabled) {
+                mOneFingerSwipeUpEnabled = oneFingerSwipeUpEnabled;
+                nativeSetFeature(POWER_FEATURE_ONE_FINGER_SWIPE_UP, mOneFingerSwipeUpEnabled ? 1 : 0);
+            }
+        }
+
+        if (mSupportsOneFingerSwipeRightConfig) {
+            boolean oneFingerSwipeRightEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_ONE_FINGER_SWIPE_RIGHT, mContext.getResources()
+                            .getInteger(com.android.internal.R.integer.config_oneFingerSwipeRightDefault),
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
+            if (oneFingerSwipeRightEnabled != mOneFingerSwipeRightEnabled) {
+                mOneFingerSwipeRightEnabled = oneFingerSwipeRightEnabled;
+                nativeSetFeature(POWER_FEATURE_ONE_FINGER_SWIPE_RIGHT, mOneFingerSwipeRightEnabled ? 1 : 0);
+            }
+        }
+
+        if (mSupportsOneFingerSwipeDownConfig) {
+            boolean oneFingerSwipeDownEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_ONE_FINGER_SWIPE_DOWN, mContext.getResources()
+                    .getInteger(com.android.internal.R.integer.config_oneFingerSwipeDownDefault),
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
+            if (oneFingerSwipeDownEnabled != mOneFingerSwipeDownEnabled) {
+                mOneFingerSwipeDownEnabled = oneFingerSwipeDownEnabled;
+                nativeSetFeature(POWER_FEATURE_ONE_FINGER_SWIPE_DOWN, mOneFingerSwipeDownEnabled ? 1 : 0);
+            }
+        }
+
+        if (mSupportsOneFingerSwipeLeftConfig) {
+            boolean oneFingerSwipeLeftEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_ONE_FINGER_SWIPE_LEFT, mContext.getResources()
+                    .getInteger(com.android.internal.R.integer.config_oneFingerSwipeLeftDefault),
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
+            if (oneFingerSwipeLeftEnabled != mOneFingerSwipeLeftEnabled) {
+                mOneFingerSwipeLeftEnabled = oneFingerSwipeLeftEnabled;
+                nativeSetFeature(POWER_FEATURE_ONE_FINGER_SWIPE_LEFT, mOneFingerSwipeLeftEnabled ? 1 : 0);
+            }
+        }
+
+        if (mSupportsTwoFingerSwipeConfig) {
+            boolean twoFingerSwipeEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.GESTURE_TWO_FINGER_SWIPE, mContext.getResources()
+                    .getInteger(com.android.internal.R.integer.config_twoFingerSwipeDefault),
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
+            if (twoFingerSwipeEnabled != mTwoFingerSwipeEnabled) {
+                mTwoFingerSwipeEnabled = twoFingerSwipeEnabled;
+                nativeSetFeature(POWER_FEATURE_TWO_FINGER_SWIPE, mTwoFingerSwipeEnabled ? 1 : 0);
+            }
         }
 
         final float oldScreenAutoBrightnessAdjustmentSetting =
