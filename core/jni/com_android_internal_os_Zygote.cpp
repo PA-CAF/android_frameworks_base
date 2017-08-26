@@ -492,9 +492,6 @@ static pid_t ForkAndSpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArra
     // The child process.
     gMallocLeakZygoteChild = 1;
 
-    // Set the jemalloc decay time to 1.
-    mallopt(M_DECAY_TIME, 1);
-
     // Clean up any descriptors which must be closed immediately
     DetachDescriptors(env, fdsToClose);
 
