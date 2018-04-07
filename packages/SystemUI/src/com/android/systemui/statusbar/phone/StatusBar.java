@@ -1126,8 +1126,8 @@ public class StatusBar extends SystemUI implements DemoMode,
         }
 
         try {
-            boolean showNav = mWindowManagerService.hasNavigationBar();
-            if (DEBUG) Log.v(TAG, "hasNavigationBar=" + showNav);
+            boolean showNav = mWindowManagerService.needsNavigationBar();
+            if (DEBUG) Log.v(TAG, "needsNavigationBar=" + showNav);
             if (showNav) {
                 createNavigationBar();
             }

@@ -647,7 +647,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     boolean mUseTvRouting;
 
     private boolean mHandleVolumeKeysInWM;
-    int mDeviceHardwareKeys;
 
     int mDeviceHardwareKeys;
 
@@ -748,6 +747,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     int mNavBarOpacityMode = NAV_BAR_OPAQUE_WHEN_FREEFORM_OR_DOCKED;
     boolean mForcingShowNavBar;
     int mForcingShowNavBarLayer;
+    boolean mNavBarEnabled = false;
 
     private boolean mPendingKeyguardOccluded;
     private boolean mKeyguardOccludedChanged;
@@ -780,8 +780,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     int mMetaState;
     int mInitialMetaState;
     boolean mForceShowSystemBars;
-
-    boolean mNavBarEnabled = false;
 
     // Custom policy for #SUPPORTED_KEYCODES_LIST key codes.
     private SparseBooleanArray mKeyPressed = new SparseBooleanArray(SUPPORTED_KEYCODE_LIST.length);
@@ -5753,7 +5751,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         Rect osf = null;
         dcf.setEmpty();
 
-        final boolean hasNavBar = (isDefaultDisplay && mHasNavigationBar
+        final boolean hasNavBar = (isDefaultDisplay && hasNavigationBar()
                 && mNavigationBar != null && mNavigationBar.isVisibleLw());
 
         final int adjust = sim & SOFT_INPUT_MASK_ADJUST;

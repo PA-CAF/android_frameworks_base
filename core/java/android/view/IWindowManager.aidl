@@ -295,7 +295,7 @@ interface IWindowManager
     boolean hasNavigationBar();
 
     /**
-     * Device needs a software navigation bar (because it has no hardware keys).
+     * Device needs a software navigation bar (separate from the status bar).
      */
     boolean needsNavigationBar();
 
