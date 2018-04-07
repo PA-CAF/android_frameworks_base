@@ -3975,6 +3975,10 @@ public final class Settings {
          */
         public static final String BUTTON_BRIGHTNESS = "button_brightness";
 
+        /** @hide */
+        public static final Validator BUTTON_BRIGHTNESS_VALIDATOR =
+		new InclusiveIntegerRangeValidator(0, 255);
+
         /**
          * Whether user can enable/disable button brightness.
          * <p>
@@ -3982,6 +3986,9 @@ public final class Settings {
          * @hide
          */
         public static final String BUTTON_BRIGHTNESS_ENABLED = "button_brightness_enabled";
+
+        /** @hide */
+        private static final Validator BUTTON_BRIGHTNESS_ENABLED_VALIDATOR = sBooleanValidator;
 
         /**
          * IMPORTANT: If you add a new public settings you also have to add it to
@@ -4324,6 +4331,11 @@ public final class Settings {
 
             // Pocket mode handler.
             PRIVATE_SETTINGS.add(POCKET_JUDGE);
+
+            // New private settings.
+            PRIVATE_SETTINGS.add(NAVIGATION_BAR_ENABLED);
+            PRIVATE_SETTINGS.add(BUTTON_BRIGHTNESS);
+            PRIVATE_SETTINGS.add(BUTTON_BRIGHTNESS_ENABLED);
         }
 
         /**
@@ -4402,6 +4414,9 @@ public final class Settings {
             VALIDATORS.put(WIFI_STATIC_DNS1, WIFI_STATIC_DNS1_VALIDATOR);
             VALIDATORS.put(WIFI_STATIC_DNS2, WIFI_STATIC_DNS2_VALIDATOR);
             VALIDATORS.put(SHOW_BATTERY_PERCENT, SHOW_BATTERY_PERCENT_VALIDATOR);
+            VALIDATORS.put(NAVIGATION_BAR_ENABLED, NAVIGATION_BAR_ENABLED_VALIDATOR);
+            VALIDATORS.put(BUTTON_BRIGHTNESS, BUTTON_BRIGHTNESS_VALIDATOR);
+            VALIDATORS.put(BUTTON_BRIGHTNESS_ENABLED, BUTTON_BRIGHTNESS_ENABLED_VALIDATOR);
         }
 
         /**
