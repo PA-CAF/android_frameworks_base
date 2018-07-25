@@ -4100,6 +4100,15 @@ public final class Settings {
         };
 
         /**
+         * Whether allowing pocket service to register sensors and dispatch informations.
+         *   0 = disabled
+         *   1 = enabled
+         * @author Carlo Savignano
+         * @hide
+         */
+        public static final String POCKET_JUDGE = "pocket_judge";
+
+        /**
          * Settings to backup. This is here so that it's in the same place as the settings
          * keys and easy to update.
          *
@@ -4280,6 +4289,9 @@ public final class Settings {
             PRIVATE_SETTINGS.add(KEY_APP_SWITCH_DOUBLE_TAP_ACTION);
             PRIVATE_SETTINGS.add(KEY_CAMERA_LONG_PRESS_ACTION);
             PRIVATE_SETTINGS.add(KEY_CAMERA_DOUBLE_TAP_ACTION);
+
+            // Pocket mode handler.
+            PRIVATE_SETTINGS.add(POCKET_JUDGE);
         }
 
         /**
@@ -7194,6 +7206,24 @@ public final class Settings {
         public static final String MANAGED_PROFILE_CONTACT_REMOTE_SEARCH =
                 "managed_profile_contact_remote_search";
 
+	/**
+         * Setting to record whether to allow quickly expanding the Quick Settings screen
+         * with simplified gestures. To be used with the OTS framework.
+         *
+         * @hide
+         */
+        public static final String QUICK_SETTINGS_QUICK_PULL_DOWN =
+                "quick_settings_quick_pull_down";
+
+        /**
+         * Settings to reset on user request. They will fall back to their default value (0).
+         *
+         * @hide
+         */
+        public static final String[] SETTINGS_TO_RESET = {
+            QUICK_SETTINGS_QUICK_PULL_DOWN
+        };
+
         /**
          * Whether or not the automatic storage manager is enabled and should run on the device.
          *
@@ -7304,6 +7334,19 @@ public final class Settings {
          * @hide
          */
         public static final String QS_AUTO_ADDED_TILES = "qs_auto_tiles";
+
+        /**
+         * Force authorize Substratum (or equivalent) frontend calling packages by ThemeInterfacer
+         * The value is boolean (1 or 0).
+         * @hide
+         */
+        public static final String FORCE_AUTHORIZE_SUBSTRATUM_PACKAGES = "force_authorize_substratum_packages";
+
+        /**
+         * Used to store sRGB state
+         * @hide
+         */
+        public static final String SRGB_ENABLED = "srgb_enabled";
 
         /**
          * This are the settings to be backed up.

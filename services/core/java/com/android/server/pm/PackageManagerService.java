@@ -184,6 +184,7 @@ import android.database.ContentObserver;
 import android.graphics.Bitmap;
 import android.hardware.display.DisplayManager;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
@@ -1238,6 +1239,8 @@ public class PackageManagerService extends IPackageManager.Stub
                 && (filter.hasDataScheme(IntentFilter.SCHEME_HTTP) ||
                         filter.hasDataScheme(IntentFilter.SCHEME_HTTPS));
     }
+
+    ArrayList<ComponentName> mDisabledComponentsList;
 
     // Set of pending broadcasts for aggregating enable/disable of components.
     static class PendingPackageBroadcasts {
@@ -2586,10 +2589,10 @@ public class PackageManagerService extends IPackageManager.Stub
             File frameworkDir = new File(Environment.getRootDirectory(), "framework");
 
             final VersionInfo ver = mSettings.getInternalVersion();
-            mIsUpgrade = !Build.FINGERPRINT.equals(ver.fingerprint);
+            mIsUpgrade = !Build.DATE.equals(ver.fingerprint);
             if (mIsUpgrade) {
                 logCriticalInfo(Log.INFO,
-                        "Upgrading from " + ver.fingerprint + " to " + Build.FINGERPRINT);
+                        "Upgrading from " + ver.fingerprint + " to " + Build.DATE);
             }
 
             // when upgrading from pre-M, promote system app permissions from install to runtime
@@ -3047,6 +3050,38 @@ public class PackageManagerService extends IPackageManager.Stub
                 Slog.i(TAG, "Deferred reconcileAppsData finished " + count + " packages");
             }, "prepareAppData");
 
+            // Disable components marked for disabling at build-time
+            mDisabledComponentsList = new ArrayList<ComponentName>();
+            for (String name : mContext.getResources().getStringArray(
+                    com.android.internal.R.array.config_disabledComponents)) {
+                ComponentName cn = ComponentName.unflattenFromString(name);
+                mDisabledComponentsList.add(cn);
+                Slog.v(TAG, "Disabling " + name);
+                String className = cn.getClassName();
+                PackageSetting pkgSetting = mSettings.mPackages.get(cn.getPackageName());
+                if (pkgSetting == null || pkgSetting.pkg == null
+                        || !pkgSetting.pkg.hasComponentClassName(className)) {
+                    Slog.w(TAG, "Unable to disable " + name);
+                    continue;
+                }
+                pkgSetting.disableComponentLPw(className, UserHandle.USER_OWNER);
+            }
+
+            // Enable components marked for forced-enable at build-time
+            for (String name : mContext.getResources().getStringArray(
+                    com.android.internal.R.array.config_forceEnabledComponents)) {
+                ComponentName cn = ComponentName.unflattenFromString(name);
+                Slog.v(TAG, "Enabling " + name);
+                String className = cn.getClassName();
+                PackageSetting pkgSetting = mSettings.mPackages.get(cn.getPackageName());
+                if (pkgSetting == null || pkgSetting.pkg == null
+                        || !pkgSetting.pkg.hasComponentClassName(className)) {
+                    Slog.w(TAG, "Unable to enable " + name);
+                    continue;
+                }
+                pkgSetting.enableComponentLPw(className, UserHandle.USER_OWNER);
+            }
+
             // If this is first boot after an OTA, and a normal boot, then
             // we need to clear code cache directories.
             // Note that we do *not* clear the application profiles. These remain valid
@@ -3063,7 +3098,7 @@ public class PackageManagerService extends IPackageManager.Stub
                                         | Installer.FLAG_CLEAR_CODE_CACHE_ONLY);
                     }
                 }
-                ver.fingerprint = Build.FINGERPRINT;
+                ver.fingerprint = Build.DATE;
             }
 
             checkDefaultBrowser();
@@ -5933,6 +5968,83 @@ public class PackageManagerService extends IPackageManager.Stub
 
         killUid(appId, userId, KILL_APP_REASON_PERMISSIONS_REVOKED);
     }
+
+    /**
+     * We might auto-grant permissions if any permission of the group is already granted. Hence if
+     * the group of a granted permission changes we need to revoke it to avoid having permissions of
+     * the new group auto-granted.
+     *
+     * @param newPackage The new package that was installed
+     * @param oldPackage The old package that was updated
+     * @param allPackageNames All package names
+     */
+    private void revokeRuntimePermissionsIfGroupChanged(
+            PackageParser.Package newPackage,
+            PackageParser.Package oldPackage,
+            ArrayList<String> allPackageNames) {
+        final int numOldPackagePermissions = oldPackage.permissions.size();
+        final ArrayMap<String, String> oldPermissionNameToGroupName
+                = new ArrayMap<>(numOldPackagePermissions);
+
+        for (int i = 0; i < numOldPackagePermissions; i++) {
+            final PackageParser.Permission permission = oldPackage.permissions.get(i);
+
+            if (permission.group != null) {
+                oldPermissionNameToGroupName.put(permission.info.name,
+                        permission.group.info.name);
+            }
+        }
+
+        final int numNewPackagePermissions = newPackage.permissions.size();
+        for (int newPermissionNum = 0; newPermissionNum < numNewPackagePermissions;
+                newPermissionNum++) {
+            final PackageParser.Permission newPermission =
+                    newPackage.permissions.get(newPermissionNum);
+            final int newProtection = newPermission.info.protectionLevel;
+
+            if ((newProtection & PermissionInfo.PROTECTION_DANGEROUS) != 0) {
+                final String permissionName = newPermission.info.name;
+                final String newPermissionGroupName =
+                        newPermission.group == null ? null : newPermission.group.info.name;
+                final String oldPermissionGroupName = oldPermissionNameToGroupName.get(
+                        permissionName);
+
+                if (newPermissionGroupName != null
+                        && !newPermissionGroupName.equals(oldPermissionGroupName)) {
+                    final List<UserInfo> users = mContext.getSystemService(UserManager.class)
+                            .getUsers();
+
+                    final int numUsers = users.size();
+                    for (int userNum = 0; userNum < numUsers; userNum++) {
+                        final int userId = users.get(userNum).id;
+                        final int numPackages = allPackageNames.size();
+
+                        for (int packageNum = 0; packageNum < numPackages; packageNum++) {
+                            final String packageName = allPackageNames.get(packageNum);
+
+                            if (checkPermission(permissionName, packageName, userId)
+                                    == PackageManager.PERMISSION_GRANTED) {
+                                EventLog.writeEvent(0x534e4554, "72710897",
+                                        newPackage.applicationInfo.uid,
+                                        "Revoking permission", permissionName, "from package",
+                                        packageName, "as the group changed from",
+                                        oldPermissionGroupName, "to", newPermissionGroupName);
+
+                                try {
+                                    revokeRuntimePermission(packageName, permissionName, userId,
+                                           false);
+                                } catch (IllegalArgumentException e) {
+                                    Slog.e(TAG, "Could not revoke " + permissionName + " from "
+                                            + packageName, e);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
     /**
      * Get the first event id for the permission.
@@ -10834,6 +10946,8 @@ public class PackageManagerService extends IPackageManager.Stub
         String primaryCpuAbiFromSettings = null;
         String secondaryCpuAbiFromSettings = null;
 
+        final PackageParser.Package oldPkg;
+
         // writer
         synchronized (mPackages) {
             if (pkg.mSharedUserId != null) {
@@ -10933,6 +11047,12 @@ public class PackageManagerService extends IPackageManager.Stub
                     pkgSetting == null ? null : new PackageSetting(pkgSetting);
             final PackageSetting disabledPkgSetting =
                     mSettings.getDisabledSystemPkgLPr(pkg.packageName);
+
+            if (oldPkgSetting == null) {
+                oldPkg = null;
+            } else {
+                oldPkg = oldPkgSetting.pkg;
+            }
 
             String[] usesStaticLibraries = null;
             if (pkg.usesStaticLibraries != null) {
@@ -11266,6 +11386,25 @@ public class PackageManagerService extends IPackageManager.Stub
                 mInstantAppRegistry.addInstantAppLPw(userId, pkgSetting.appId);
             }
         }
+
+        if (oldPkg != null) {
+            // We need to call revokeRuntimePermissionsIfGroupChanged async as permission
+            // revokation from this method might need to kill apps which need the
+            // mPackages lock on a different thread. This would dead lock.
+            //
+            // Hence create a copy of all package names and pass it into
+            // revokeRuntimePermissionsIfGroupChanged. Only for those permissions might get
+            // revoked. If a new package is added before the async code runs the permission
+            // won't be granted yet, hence new packages are no problem.
+            final ArrayList<String> allPackageNames = new ArrayList<>(mPackages.keySet());
+
+            AsyncTask.execute(new Runnable() {
+                public void run() {
+                    revokeRuntimePermissionsIfGroupChanged(pkg, oldPkg, allPackageNames);
+                }
+            });
+        }
+
         return pkg;
     }
 
@@ -21953,6 +22092,12 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
     public void setComponentEnabledSetting(ComponentName componentName,
             int newState, int flags, int userId) {
         if (!sUserManager.exists(userId)) return;
+        // Don't allow to enable components marked for disabling at build-time
+        if (mDisabledComponentsList.contains(componentName)) {
+            Slog.d(TAG, "Ignoring attempt to set enabled state of disabled component "
+                    + componentName.flattenToString());
+            return;
+        }
         setEnabledSetting(componentName.getPackageName(),
                 componentName.getClassName(), newState, flags, userId, null);
     }
@@ -23886,7 +24031,7 @@ Slog.v(TAG, ":: stepped forward, applying functor at tag " + parser.getName());
                     Slog.w(TAG, "Failed to scan " + ps.codePath + ": " + e.getMessage());
                 }
 
-                if (!Build.FINGERPRINT.equals(ver.fingerprint)) {
+                if (!Build.DATE.equals(ver.fingerprint)) {
                     clearAppDataLIF(ps.pkg, UserHandle.USER_ALL,
                             StorageManager.FLAG_STORAGE_DE | StorageManager.FLAG_STORAGE_CE
                                     | Installer.FLAG_CLEAR_CODE_CACHE_ONLY);

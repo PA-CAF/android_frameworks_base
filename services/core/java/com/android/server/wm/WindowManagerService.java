@@ -163,6 +163,7 @@ import android.os.Trace;
 import android.os.UserHandle;
 import android.os.WorkSource;
 import android.provider.Settings;
+import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.util.ArraySet;
 import android.util.DisplayMetrics;
@@ -245,6 +246,7 @@ import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -533,6 +535,7 @@ public class WindowManagerService extends IWindowManager.Stub
 
     boolean mDisplayReady;
     boolean mSafeMode;
+    boolean mDisableOverlays;
     boolean mDisplayEnabled = false;
     boolean mSystemBooted = false;
     boolean mForceDisplayEnabled = false;
@@ -660,6 +663,9 @@ public class WindowManagerService extends IWindowManager.Stub
     // hits zero so we can apply deferred orientation updates.
     int mSeamlessRotationCount = 0;
 
+    private String mSrgbPath;
+    private boolean mSrgbSupported;
+
     private final class SettingsObserver extends ContentObserver {
         private final Uri mDisplayInversionEnabledUri =
                 Settings.Secure.getUriFor(Settings.Secure.ACCESSIBILITY_DISPLAY_INVERSION_ENABLED);
@@ -669,6 +675,8 @@ public class WindowManagerService extends IWindowManager.Stub
                 Settings.Global.getUriFor(Settings.Global.TRANSITION_ANIMATION_SCALE);
         private final Uri mAnimationDurationScaleUri =
                 Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE);
+        private final Uri mSrgbUri =
+                Settings.Secure.getUriFor(Settings.Secure.SRGB_ENABLED);
 
         public SettingsObserver() {
             super(new Handler());
@@ -681,6 +689,7 @@ public class WindowManagerService extends IWindowManager.Stub
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(mAnimationDurationScaleUri, false, this,
                     UserHandle.USER_ALL);
+            resolver.registerContentObserver(mSrgbUri, false, this, UserHandle.USER_CURRENT);
         }
 
         @Override
@@ -691,6 +700,8 @@ public class WindowManagerService extends IWindowManager.Stub
 
             if (mDisplayInversionEnabledUri.equals(uri)) {
                 updateCircularDisplayMaskIfNeeded();
+            } else if (mSrgbUri.equals(uri) && mSrgbSupported) {
+                writeState(mSrgbPath);
             } else {
                 @UpdateAnimationScaleMode
                 final int mode;
@@ -1142,6 +1153,12 @@ public class WindowManagerService extends IWindowManager.Stub
         // Listen to user removal broadcasts so that we can remove the user-specific data.
         filter.addAction(Intent.ACTION_USER_REMOVED);
         mContext.registerReceiver(mBroadcastReceiver, filter);
+
+        mSrgbPath = mContext.getString(com.android.internal.R.string.config_srgb_path);
+        mSrgbSupported = !TextUtils.isEmpty(mSrgbPath);
+        if (mSrgbSupported) {
+            writeState(mSrgbPath);
+        }
 
         mSettingsObserver = new SettingsObserver();
 
@@ -3647,6 +3664,20 @@ public class WindowManagerService extends IWindowManager.Stub
         }
     }
 
+    private void writeState(String path) {
+        final String value = Integer.toString(Settings.Secure.getInt(
+                mContext.getContentResolver(), Settings.Secure.SRGB_ENABLED, 0));
+        try {
+            final File file = new File(path);
+            final FileOutputStream fos = new FileOutputStream(file);
+            fos.write(value.getBytes());
+            fos.flush();
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void updateCircularDisplayMaskIfNeeded() {
         if (mContext.getResources().getConfiguration().isScreenRound()
                 && mContext.getResources().getBoolean(
@@ -4808,6 +4839,27 @@ public class WindowManagerService extends IWindowManager.Stub
         }
         mPolicy.setSafeMode(mSafeMode);
         return mSafeMode;
+    }
+
+    public boolean detectDisableOverlays() {
+        if (!mInputMonitor.waitForInputDevicesReady(
+                INPUT_DEVICES_READY_FOR_SAFE_MODE_DETECTION_TIMEOUT_MILLIS)) {
+            Slog.w(TAG_WM, "Devices still not ready after waiting "
+                   + INPUT_DEVICES_READY_FOR_SAFE_MODE_DETECTION_TIMEOUT_MILLIS
+                   + " milliseconds before attempting to detect safe mode.");
+        }
+
+        int volumeUpState = mInputManager.getKeyCodeState(-1, InputDevice.SOURCE_ANY,
+                KeyEvent.KEYCODE_VOLUME_UP);
+        mDisableOverlays = volumeUpState > 0;
+
+        if (mDisableOverlays) {
+            Log.i(TAG_WM, "All enabled theme overlays will now be disabled.");
+        } else {
+            Log.i(TAG_WM, "System will boot with enabled overlays intact.");
+        }
+
+        return mDisableOverlays;
     }
 
     public void displayReady() {

@@ -818,10 +818,12 @@ public class FingerprintService extends SystemService implements IHwBinder.Death
                 mFailedAttempts++;
                 mTimedLockoutCleared = false;
                 final int lockoutMode = getLockoutMode();
-                if (mPerformanceStats != null && lockoutMode == AuthenticationClient.LOCKOUT_PERMANENT) {
-                    mPerformanceStats.permanentLockout++;
-                } else if (mPerformanceStats != null && lockoutMode == AuthenticationClient.LOCKOUT_TIMED) {
-                    mPerformanceStats.lockout++;
+                if (mPerformanceStats != null) {
+                    if (lockoutMode == AuthenticationClient.LOCKOUT_PERMANENT) {
+                        mPerformanceStats.permanentLockout++;
+                    } else if (lockoutMode == AuthenticationClient.LOCKOUT_TIMED) {
+                        mPerformanceStats.lockout++;
+                    }
                 }
 
                 // Failing multiple times will continue to push out the lockout time

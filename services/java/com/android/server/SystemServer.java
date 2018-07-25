@@ -93,6 +93,8 @@ import com.android.server.om.OverlayManagerService;
 import com.android.server.os.RegionalizationService;
 import com.android.server.os.DeviceIdentifiersPolicyService;
 import com.android.server.os.SchedulingPolicyService;
+import com.android.server.pocket.PocketService;
+import com.android.server.pocket.PocketBridgeService;
 import com.android.server.pm.BackgroundDexOptService;
 import com.android.server.pm.Installer;
 import com.android.server.pm.LauncherAppsService;
@@ -110,6 +112,7 @@ import com.android.server.security.KeyChainSystemService;
 import com.android.server.soundtrigger.SoundTriggerService;
 import com.android.server.statusbar.StatusBarManagerService;
 import com.android.server.storage.DeviceStorageMonitorService;
+import com.android.server.substratum.SubstratumService;
 import com.android.server.telecom.TelecomLoaderService;
 import com.android.server.trust.TrustManagerService;
 import com.android.server.tv.TvInputManagerService;
@@ -644,6 +647,11 @@ public final class SystemServer {
         // Manages Overlay packages
         traceBeginAndSlog("StartOverlayManagerService");
         mSystemServiceManager.startService(new OverlayManagerService(mSystemContext, installer));
+
+        // Substratum system server implementation
+        traceBeginAndSlog("StartSubstratumService");
+        mSystemServiceManager.startService(new SubstratumService(mSystemContext));
+
         traceEnd();
 
         // The sensor service needs access to package manager service, app ops
@@ -1557,6 +1565,17 @@ public final class SystemServer {
             traceBeginAndSlog("StartLauncherAppsService");
             mSystemServiceManager.startService(LauncherAppsService.class);
             traceEnd();
+
+
+            traceBeginAndSlog("StartPocketService");
+            mSystemServiceManager.startService(PocketService.class);
+            traceEnd();
+            if (!context.getResources().getString(
+                    com.android.internal.R.string.config_pocketBridgeSysfsInpocket).isEmpty()) {
+                traceBeginAndSlog("StartPocketBridgeService");
+                mSystemServiceManager.startService(PocketBridgeService.class);
+                traceEnd();
+            }
         }
 
         if (!disableNonCoreServices && !disableMediaProjection) {
@@ -1676,6 +1695,12 @@ public final class SystemServer {
 
         if (safeMode) {
             mActivityManagerService.showSafeModeOverlay();
+        }
+
+        // Let's check whether we should disable all theme overlays
+        final boolean disableOverlays = wm.detectDisableOverlays();
+        if (disableOverlays) {
+            mActivityManagerService.disableOverlays();
         }
 
         // Update the configuration for this context by hand, because we're going

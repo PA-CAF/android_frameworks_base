@@ -179,6 +179,7 @@ LOCAL_SRC_FILES += \
 	core/java/android/content/pm/IPinItemRequest.aidl \
 	core/java/android/content/pm/IShortcutService.aidl \
 	core/java/android/content/pm/permission/IRuntimePermissionPresenter.aidl \
+	core/java/android/content/substratum/ISubstratumService.aidl \
 	core/java/android/database/IContentObserver.aidl \
 	../av/camera/aidl/android/hardware/ICameraService.aidl \
 	../av/camera/aidl/android/hardware/ICameraServiceListener.aidl \
@@ -280,6 +281,8 @@ LOCAL_SRC_FILES += \
 	core/java/android/os/storage/IStorageEventListener.aidl \
 	core/java/android/os/storage/IStorageShutdownObserver.aidl \
 	core/java/android/os/storage/IObbActionListener.aidl \
+	core/java/android/pocket/IPocketService.aidl \
+	core/java/android/pocket/IPocketCallback.aidl \
 	core/java/android/security/IKeystoreService.aidl \
 	core/java/android/security/keymaster/IKeyAttestationApplicationIdProvider.aidl \
 	core/java/android/service/autofill/IAutoFillService.aidl \
@@ -408,6 +411,7 @@ LOCAL_SRC_FILES += \
 	core/java/com/android/internal/os/IShellCallback.aidl \
 	core/java/com/android/internal/statusbar/IStatusBar.aidl \
 	core/java/com/android/internal/statusbar/IStatusBarService.aidl \
+	core/java/com/android/internal/substratum/ISubstratumHelperService.aidl \
 	core/java/com/android/internal/textservice/ISpellCheckerService.aidl \
 	core/java/com/android/internal/textservice/ISpellCheckerServiceCallback.aidl \
 	core/java/com/android/internal/textservice/ISpellCheckerSession.aidl \

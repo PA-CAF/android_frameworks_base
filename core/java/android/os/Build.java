@@ -54,6 +54,12 @@ public class Build {
     public static final String BOARD = getString("ro.product.board");
 
     /**
+     * The build date
+     * @hide
+     */
+    public static final String DATE = getString("ro.build.date");
+
+    /**
      * The name of the instruction set (CPU type + ABI convention) of native code.
      *
      * @deprecated Use {@link #SUPPORTED_ABIS} instead.
@@ -869,14 +875,14 @@ public class Build {
             Slog.e(TAG, "Required ro.build.fingerprint is empty!");
             return false;
         }
-
+        /*
         if (!TextUtils.isEmpty(vendor)) {
             if (!Objects.equals(system, vendor)) {
                 Slog.e(TAG, "Mismatched fingerprints; system reported " + system
                         + " but vendor reported " + vendor);
                 return false;
             }
-        }
+        }*/
 
         /* TODO: Figure out issue with checks failing
         if (!TextUtils.isEmpty(bootimage)) {
